@@ -42,62 +42,57 @@
   </div>
 
   <script>
-    const supabaseUrl = "https://vqjoucscghcvneudywls.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxam91Y3NjZ2hjdm5ldWR5d2xzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTYzMjgsImV4cCI6MjA5MDQzMjMyOH0.lttMVg3alSreRBPkrmdLK07kKlGAu3W7MYtJypKDSLg"; // safe with RLS enabled
-    const client = supabase.createClient(supabaseUrl, supabaseKey);
+  const supabaseUrl = "https://vqjoucscghcvneudywls.supabase.co";
+  const supabaseKey = "YOUR_ANON_KEY";
+  const client = supabase.createClient(supabaseUrl, supabaseKey);
 
-    async function submitForm() {
-      const name = document.getElementById("name").value;
-      const email = document.getElementById("email").value;
-      const phone = document.getElementById("phone").value;
-      const address = document.getElementById("address").value;
-      const postal = document.getElementById("postal").value;
-      const msg = document.getElementById("message");
+  async function submitForm() {
+    const name = document.getElementById("name").value;
+    const email = document.getElementById("email").value;
+    const phone = document.getElementById("phone").value;
+    const address = document.getElementById("address").value;
+    const postal = document.getElementById("postal").value;
+    const msg = document.getElementById("message");
 
-      // Insert member into Supabase
-      const { data, error } = await client
-        .from("members")
-        .insert([{ name, email, phone, address, postal }])
-        .select(); // returns inserted row
+    // Insert member
+    const { data, error } = await client
+      .from("members")
+      .insert([{ name, email, phone, address, postal }])
+      .select();
 
-      if (error) {
-        msg.style.color = "red";
-        msg.innerText = "❌ Error: " + error.message;
-        return;
-      }
-
-      // Generate QR code (base64 image)
-      const memberId = data[0].id;
-      const qrData = await QRCode.toDataURL(memberId);
-
-      // Call Edge Function to send email
-      try {
-        const res = await fetch("https://vqjoucscghcvneudywls.supabase.co/functions/v1/new-member", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: memberId, qr: qrData })
-        });
-
-        if (res.ok) {
-          msg.style.color = "green";
-          msg.innerText = "✅ Signup successful! Check your email for confirmation.";
-        } else {
-          msg.style.color = "orange";
-          msg.innerText = "⚠️ Signup saved, but email not sent yet.";
-        }
-
-      } catch (e) {
-        msg.style.color = "orange";
-        msg.innerText = "⚠️ Signup saved, email error.";
-      }
-
-      // Clear form
-      document.getElementById("name").value = "";
-      document.getElementById("email").value = "";
-      document.getElementById("phone").value = "";
-      document.getElementById("address").value = "";
-      document.getElementById("postal").value = "";
+    if (error) {
+      msg.style.color = "red";
+      msg.innerText = "❌ Error: " + error.message;
+      return;
     }
-  </script>
+
+    const memberId = data[0].id;
+
+    // Call Edge Function (optional, for status update)
+    try {
+      const res = await fetch("https://vqjoucscghcvneudywls.supabase.co/functions/v1/new-member", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: memberId })
+      });
+
+      if (!res.ok) throw new Error("Edge function failed");
+
+      msg.style.color = "green";
+      msg.innerText = "✅ Signup successful! We will contact you soon.";
+
+    } catch (e) {
+      msg.style.color = "orange";
+      msg.innerText = "⚠️ Signup saved, but confirmation pending.";
+    }
+
+    // Clear form
+    document.getElementById("name").value = "";
+    document.getElementById("email").value = "";
+    document.getElementById("phone").value = "";
+    document.getElementById("address").value = "";
+    document.getElementById("postal").value = "";
+  }
+</script>
 </body>
 </html>
