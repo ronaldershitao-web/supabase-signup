@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Inventory System</title>
+  <title>Inventory (Batch + Expiry)</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     body {
       font-family: Arial;
+      background: #f4f6f8;
       padding: 20px;
-      background: #f5f5f5;
     }
 
     h1 {
@@ -19,8 +19,8 @@
       background: white;
       padding: 15px;
       margin-bottom: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
 
     input, select, button {
@@ -33,6 +33,7 @@
       color: white;
       border: none;
       cursor: pointer;
+      border-radius: 5px;
     }
 
     button:hover {
@@ -51,149 +52,206 @@
       text-align: center;
     }
 
-    .low {
+    .expired {
       background-color: #ffcccc;
+    }
+
+    .soon {
+      background-color: #fff3cd;
     }
   </style>
 </head>
 
 <body>
 
-  <h1>📦 Inventory System</h1>
+<h1>📦 Inventory System (Batch + Expiry)</h1>
 
-  <!-- ADD ITEM -->
-  <div class="card">
-    <h3>Add Item</h3>
-    <input id="itemName" placeholder="Item Name">
-    <input id="category" placeholder="Category">
-    <input id="minStock" type="number" placeholder="Min Stock">
-    <button onclick="addItem()">Add</button>
-  </div>
+<!-- ADD ITEM -->
+<div class="card">
+  <h3>Add Item</h3>
+  <input id="itemName" placeholder="Item Name">
+  <input id="category" placeholder="Category">
+  <button onclick="addItem()">Add Item</button>
+</div>
 
-  <!-- STOCK MOVEMENT -->
-  <div class="card">
-    <h3>Stock Movement</h3>
+<!-- STOCK IN -->
+<div class="card">
+  <h3>Stock IN (New Batch)</h3>
 
-    <select id="itemSelect"></select>
-    <input id="qty" type="number" placeholder="Quantity">
+  <select id="itemSelect"></select>
+  <input id="batchNo" placeholder="Batch No">
+  <input id="expiryDate" type="date">
+  <input id="qtyIn" type="number" placeholder="Quantity">
 
-    <button onclick="stockIn()">Stock IN</button>
-    <button onclick="stockOut()">Stock OUT</button>
-  </div>
+  <button onclick="stockIn()">Add Batch</button>
+</div>
 
-  <!-- INVENTORY TABLE -->
-  <div class="card">
-    <h3>Inventory</h3>
-    <button onclick="loadInventory()">Refresh</button>
+<!-- STOCK OUT -->
+<div class="card">
+  <h3>Stock OUT (Auto FIFO)</h3>
 
-    <table id="inventoryTable">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Category</th>
-          <th>Stock</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
+  <select id="itemSelectOut"></select>
+  <input id="qtyOut" type="number" placeholder="Quantity">
 
-  <script>
-    const supabase = window.supabase.createClient(
-      "https://vqjoucscghcvneudywls.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxam91Y3NjZ2hjdm5ldWR5d2xzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTYzMjgsImV4cCI6MjA5MDQzMjMyOH0.lttMVg3alSreRBPkrmdLK07kKlGAu3W7MYtJypKDSLg"
-    );
+  <button onclick="stockOut()">Remove Stock</button>
+</div>
 
-    // LOAD DROPDOWN
-    async function loadItems() {
-      const { data } = await supabase.from("items").select("*");
+<!-- INVENTORY -->
+<div class="card">
+  <h3>Inventory View</h3>
+  <button onclick="loadInventory()">Refresh</button>
 
-      const select = document.getElementById("itemSelect");
-      select.innerHTML = "";
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Batch</th>
+        <th>Expiry</th>
+        <th>Qty</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="inventoryTable"></tbody>
+  </table>
+</div>
 
-      data.forEach(item => {
-        const option = document.createElement("option");
-        option.value = item.id;
-        option.text = item.item_name;
-        select.appendChild(option);
-      });
-    }
+<script>
+const supabase = window.supabase.createClient(
+  "YOUR_PROJECT_URL",
+  "YOUR_ANON_KEY"
+);
 
-    // ADD ITEM
-    async function addItem() {
-      const name = document.getElementById("itemName").value;
-      const category = document.getElementById("category").value;
-      const minStock = document.getElementById("minStock").value || 0;
+// LOAD ITEMS INTO DROPDOWN
+async function loadItems() {
+  const { data } = await supabase.from("items").select("*");
 
-      await supabase.from("items").insert([
-        { item_name: name, category: category, min_stock: minStock }
-      ]);
+  const selectIn = document.getElementById("itemSelect");
+  const selectOut = document.getElementById("itemSelectOut");
 
-      alert("Item Added");
-      loadItems();
-      loadInventory();
-    }
+  selectIn.innerHTML = "";
+  selectOut.innerHTML = "";
 
-    // STOCK IN
-    async function stockIn() {
-      const itemId = document.getElementById("itemSelect").value;
-      const qty = document.getElementById("qty").value;
+  data.forEach(item => {
+    let opt1 = document.createElement("option");
+    opt1.value = item.id;
+    opt1.text = item.item_name;
 
-      await supabase.from("transactions").insert([
-        { item_id: itemId, quantity: qty, type: "IN" }
-      ]);
+    let opt2 = opt1.cloneNode(true);
 
-      alert("Stock Added");
-      loadInventory();
-    }
+    selectIn.appendChild(opt1);
+    selectOut.appendChild(opt2);
+  });
+}
 
-    // STOCK OUT
-    async function stockOut() {
-      const itemId = document.getElementById("itemSelect").value;
-      const qty = document.getElementById("qty").value;
+// ADD ITEM
+async function addItem() {
+  const name = document.getElementById("itemName").value;
+  const category = document.getElementById("category").value;
 
-      const { error } = await supabase.from("transactions").insert([
-        { item_id: itemId, quantity: qty, type: "OUT" }
-      ]);
+  await supabase.from("items").insert([
+    { item_name: name, category: category }
+  ]);
 
-      if (error) {
-        alert(error.message);
-      } else {
-        alert("Stock Removed");
-        loadInventory();
+  alert("Item added");
+  loadItems();
+}
+
+// STOCK IN
+async function stockIn() {
+  const itemId = document.getElementById("itemSelect").value;
+  const batchNo = document.getElementById("batchNo").value;
+  const expiry = document.getElementById("expiryDate").value;
+  const qty = document.getElementById("qtyIn").value;
+
+  const { data: batch } = await supabase
+    .from("batches")
+    .insert([
+      {
+        item_id: itemId,
+        batch_no: batchNo,
+        expiry_date: expiry,
+        quantity: 0
       }
+    ])
+    .select()
+    .single();
+
+  await supabase.from("transactions").insert([
+    {
+      batch_id: batch.id,
+      quantity: qty,
+      type: "IN"
     }
+  ]);
 
-    // LOAD INVENTORY TABLE
-    async function loadInventory() {
-      const { data } = await supabase.from("inventory_view").select("*");
+  alert("Stock IN successful");
+  loadInventory();
+}
 
-      const table = document.querySelector("#inventoryTable tbody");
-      table.innerHTML = "";
+// STOCK OUT (FIFO handled in backend)
+async function stockOut() {
+  const itemId = document.getElementById("itemSelectOut").value;
+  const qty = document.getElementById("qtyOut").value;
 
-      data.forEach(row => {
-        const tr = document.createElement("tr");
+  const { data } = await supabase
+    .from("batches")
+    .select("id")
+    .eq("item_id", itemId)
+    .limit(1);
 
-        if (row.stock_status === "LOW") {
-          tr.classList.add("low");
-        }
+  if (!data.length) {
+    alert("No stock available");
+    return;
+  }
 
-        tr.innerHTML = `
-          <td>${row.item_name}</td>
-          <td>${row.category}</td>
-          <td>${row.stock_on_hand}</td>
-          <td>${row.stock_status}</td>
-        `;
-
-        table.appendChild(tr);
-      });
+  const { error } = await supabase.from("transactions").insert([
+    {
+      batch_id: data[0].id,
+      quantity: qty,
+      type: "OUT"
     }
+  ]);
 
-    // INITIAL LOAD
-    loadItems();
+  if (error) {
+    alert(error.message);
+  } else {
+    alert("Stock OUT successful");
     loadInventory();
-  </script>
+  }
+}
+
+// LOAD INVENTORY TABLE
+async function loadInventory() {
+  const { data } = await supabase.from("inventory_view").select("*");
+
+  const table = document.getElementById("inventoryTable");
+  table.innerHTML = "";
+
+  data.forEach(row => {
+    const tr = document.createElement("tr");
+
+    if (row.status === "EXPIRED") {
+      tr.classList.add("expired");
+    } else if (row.status === "EXPIRING SOON") {
+      tr.classList.add("soon");
+    }
+
+    tr.innerHTML = `
+      <td>${row.item_name}</td>
+      <td>${row.batch_no}</td>
+      <td>${row.expiry_date}</td>
+      <td>${row.quantity}</td>
+      <td>${row.status}</td>
+    `;
+
+    table.appendChild(tr);
+  });
+}
+
+// INITIAL LOAD
+loadItems();
+loadInventory();
+</script>
 
 </body>
 </html>
