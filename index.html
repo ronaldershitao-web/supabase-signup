@@ -1,96 +1,199 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Pastoral System</title>
+  <title>Inventory System</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .card {
+      background: white;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    input, select, button {
+      padding: 8px;
+      margin: 5px;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .low {
+      background-color: #ffcccc;
+    }
+  </style>
 </head>
+
 <body>
 
-<h2>Add Member</h2>
-<input id="name" placeholder="Name">
-<input id="contact" placeholder="Contact">
-<button onclick="addMember()">Add Member</button>
+  <h1>📦 Inventory System</h1>
 
-<h2>Create Case</h2>
-<input id="member_id" placeholder="Member ID">
-<input id="type" placeholder="Case Type">
-<input id="priority" placeholder="Priority (1-5)">
-<input id="due_date" type="date">
-<button onclick="createCase()">Create Case</button>
+  <!-- ADD ITEM -->
+  <div class="card">
+    <h3>Add Item</h3>
+    <input id="itemName" placeholder="Item Name">
+    <input id="category" placeholder="Category">
+    <input id="minStock" type="number" placeholder="Min Stock">
+    <button onclick="addItem()">Add</button>
+  </div>
 
-<h2>🔥 Today's Tasks</h2>
-<button onclick="loadTasks()">Load Tasks</button>
-<ul id="taskList"></ul>
+  <!-- STOCK MOVEMENT -->
+  <div class="card">
+    <h3>Stock Movement</h3>
 
-<script>
-const supabase = window.supabase.createClient(
-  "https://vqjoucscghcvneudywls.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxam91Y3NjZ2hjdm5ldWR5d2xzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTYzMjgsImV4cCI6MjA5MDQzMjMyOH0.lttMVg3alSreRBPkrmdLK07kKlGAu3W7MYtJypKDSLg"
-);
+    <select id="itemSelect"></select>
+    <input id="qty" type="number" placeholder="Quantity">
 
-// ADD MEMBER
-async function addMember() {
-  const name = document.getElementById("name").value;
-  const contact = document.getElementById("contact").value;
+    <button onclick="stockIn()">Stock IN</button>
+    <button onclick="stockOut()">Stock OUT</button>
+  </div>
 
-  const { data, error } = await supabase
-    .from("members")
-    .insert([{ name, contact }]);
+  <!-- INVENTORY TABLE -->
+  <div class="card">
+    <h3>Inventory</h3>
+    <button onclick="loadInventory()">Refresh</button>
 
-  alert("Member added!");
-}
+    <table id="inventoryTable">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Category</th>
+          <th>Stock</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-// CREATE CASE + TASK
-async function createCase() {
-  const member_id = document.getElementById("member_id").value;
-  const type = document.getElementById("type").value;
-  const priority = parseInt(document.getElementById("priority").value);
-  const due_date = document.getElementById("due_date").value;
+  <script>
+    const supabase = window.supabase.createClient(
+      "https://vqjoucscghcvneudywls.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxam91Y3NjZ2hjdm5ldWR5d2xzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTYzMjgsImV4cCI6MjA5MDQzMjMyOH0.lttMVg3alSreRBPkrmdLK07kKlGAu3W7MYtJypKDSLg"
+    );
 
-  const { data: caseData } = await supabase
-    .from("cases")
-    .insert([{ member_id, type, priority }])
-    .select();
+    // LOAD DROPDOWN
+    async function loadItems() {
+      const { data } = await supabase.from("items").select("*");
 
-  const case_id = caseData[0].id;
+      const select = document.getElementById("itemSelect");
+      select.innerHTML = "";
 
-  await supabase.from("tasks").insert([
-    {
-      case_id,
-      task_type: "follow-up",
-      due_date
+      data.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.id;
+        option.text = item.item_name;
+        select.appendChild(option);
+      });
     }
-  ]);
 
-  alert("Case + Task created!");
-}
+    // ADD ITEM
+    async function addItem() {
+      const name = document.getElementById("itemName").value;
+      const category = document.getElementById("category").value;
+      const minStock = document.getElementById("minStock").value || 0;
 
-// LOAD TASKS
-async function loadTasks() {
-  const { data } = await supabase
-    .from("tasks")
-    .select(`
-      id,
-      task_type,
-      due_date,
-      cases (
-        priority,
-        members ( name )
-      )
-    `)
-    .eq("completed", false)
-    .lte("due_date", new Date().toISOString().split('T')[0]);
+      await supabase.from("items").insert([
+        { item_name: name, category: category, min_stock: minStock }
+      ]);
 
-  const list = document.getElementById("taskList");
-  list.innerHTML = "";
+      alert("Item Added");
+      loadItems();
+      loadInventory();
+    }
 
-  data.forEach(task => {
-    const li = document.createElement("li");
-    li.innerText = `${task.cases.members.name} - ${task.task_type} (Priority ${task.cases.priority})`;
-    list.appendChild(li);
-  });
-}
-</script>
+    // STOCK IN
+    async function stockIn() {
+      const itemId = document.getElementById("itemSelect").value;
+      const qty = document.getElementById("qty").value;
+
+      await supabase.from("transactions").insert([
+        { item_id: itemId, quantity: qty, type: "IN" }
+      ]);
+
+      alert("Stock Added");
+      loadInventory();
+    }
+
+    // STOCK OUT
+    async function stockOut() {
+      const itemId = document.getElementById("itemSelect").value;
+      const qty = document.getElementById("qty").value;
+
+      const { error } = await supabase.from("transactions").insert([
+        { item_id: itemId, quantity: qty, type: "OUT" }
+      ]);
+
+      if (error) {
+        alert(error.message);
+      } else {
+        alert("Stock Removed");
+        loadInventory();
+      }
+    }
+
+    // LOAD INVENTORY TABLE
+    async function loadInventory() {
+      const { data } = await supabase.from("inventory_view").select("*");
+
+      const table = document.querySelector("#inventoryTable tbody");
+      table.innerHTML = "";
+
+      data.forEach(row => {
+        const tr = document.createElement("tr");
+
+        if (row.stock_status === "LOW") {
+          tr.classList.add("low");
+        }
+
+        tr.innerHTML = `
+          <td>${row.item_name}</td>
+          <td>${row.category}</td>
+          <td>${row.stock_on_hand}</td>
+          <td>${row.stock_status}</td>
+        `;
+
+        table.appendChild(tr);
+      });
+    }
+
+    // INITIAL LOAD
+    loadItems();
+    loadInventory();
+  </script>
 
 </body>
 </html>
