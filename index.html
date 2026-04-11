@@ -101,10 +101,12 @@
 <script>
 const supabase = window.supabase.createClient(
   "https://vqjoucscghcvneudywls.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxam91Y3NjZ2hjdm5ldWR5d2xzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTYzMjgsImV4cCI6MjA5MDQzMjMyOH0.lttMVg3alSreRBPkrmdLK07kKlGAu3W7MYtJypKDSLg"
+  "YOUR_ANON_KEY"
 );
 
+// =====================
 // LOAD ITEMS
+// =====================
 async function loadItems() {
   const { data, error } = await supabase.from("items").select("*");
 
@@ -120,42 +122,34 @@ async function loadItems() {
   outSel.innerHTML = "";
 
   data.forEach(item => {
-    let opt1 = new Option(item.item_name, item.id);
-    let opt2 = new Option(item.item_name, item.id);
-
-    inSel.add(opt1);
-    outSel.add(opt2);
+    inSel.add(new Option(item.item_name, item.id));
+    outSel.add(new Option(item.item_name, item.id));
   });
 }
 
+// =====================
 // ADD ITEM
+// =====================
 async function addItem() {
-  alert("BUTTON CLICKED");
-
   const name = document.getElementById("itemName").value;
   const category = document.getElementById("category").value;
 
-  console.log("INPUT:", name, category);
-
-  const { data, error } = await supabase
-    .from("items")
-    .insert([
-      { item_name: name, category: category }
-    ])
-    .select();
-
-  console.log("RESULT:", { data, error });
+  const { error } = await supabase.from("items").insert([
+    { item_name: name, category }
+  ]);
 
   if (error) {
-    alert("SUPABASE ERROR: " + error.message);
+    alert(error.message);
     return;
   }
 
-  alert("ITEM ADDED SUCCESSFULLY");
+  alert("Item added");
   loadItems();
 }
 
+// =====================
 // STOCK IN
+// =====================
 async function stockIn() {
   const itemId = document.getElementById("itemSelect").value;
   const batchNo = document.getElementById("batchNo").value;
@@ -164,44 +158,74 @@ async function stockIn() {
 
   const { data: batch, error } = await supabase
     .from("batches")
-    .insert([{ item_id: itemId, batch_no: batchNo, expiry_date: expiry, quantity: 0 }])
+    .insert([
+      {
+        item_id: itemId,
+        batch_no: batchNo,
+        expiry_date: expiry,
+        quantity: 0
+      }
+    ])
     .select()
     .single();
 
-  if (error) return alert(error.message);
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
   await supabase.from("transactions").insert([
-    { batch_id: batch.id, quantity: qty, type: "IN" }
+    {
+      batch_id: batch.id,
+      quantity: qty,
+      type: "IN"
+    }
   ]);
 
   alert("Stock IN done");
   loadInventory();
 }
 
-// STOCK OUT
+// =====================
+// STOCK OUT (FIFO SAFE)
+// =====================
 async function stockOut() {
   const itemId = document.getElementById("itemSelectOut").value;
   const qty = document.getElementById("qtyOut").value;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("batches")
     .select("id")
     .eq("item_id", itemId)
+    .gt("quantity", 0)
+    .order("expiry_date", { ascending: true })
     .limit(1);
 
-  if (!data.length) return alert("No stock");
+  if (error || !data.length) {
+    alert("No stock available");
+    return;
+  }
 
-  const { error } = await supabase.from("transactions").insert([
-    { batch_id: data[0].id, quantity: qty, type: "OUT" }
+  const { error: txError } = await supabase.from("transactions").insert([
+    {
+      batch_id: data[0].id,
+      quantity: qty,
+      type: "OUT"
+    }
   ]);
 
-  if (error) return alert(error.message);
+  if (txError) {
+    alert(txError.message);
+    return;
+  }
 
   alert("Stock OUT done");
   loadInventory();
 }
 
+// =====================
 // LOAD INVENTORY
+// =====================
 async function loadInventory() {
   const { data, error } = await supabase.from("inventory_view").select("*");
 
@@ -231,15 +255,20 @@ async function loadInventory() {
   });
 }
 
-// EVENTS (NO MORE onclick)
-document.getElementById("addItemBtn").addEventListener("click", addItem);
-document.getElementById("stockInBtn").addEventListener("click", stockIn);
-document.getElementById("stockOutBtn").addEventListener("click", stockOut);
-document.getElementById("refreshBtn").addEventListener("click", loadInventory);
+// =====================
+// FIX: DOM READY BINDING
+// =====================
+document.addEventListener("DOMContentLoaded", () => {
 
-// INIT
-loadItems();
-loadInventory();
+  document.getElementById("addItemBtn").addEventListener("click", addItem);
+  document.getElementById("stockInBtn").addEventListener("click", stockIn);
+  document.getElementById("stockOutBtn").addEventListener("click", stockOut);
+  document.getElementById("refreshBtn").addEventListener("click", loadInventory);
+
+  loadItems();
+  loadInventory();
+
+});
 </script>
 
 </body>
