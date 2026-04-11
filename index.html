@@ -130,16 +130,28 @@ async function loadItems() {
 
 // ADD ITEM
 async function addItem() {
+  alert("BUTTON CLICKED");
+
   const name = document.getElementById("itemName").value;
   const category = document.getElementById("category").value;
 
-  const { error } = await supabase.from("items").insert([
-    { item_name: name, category }
-  ]);
+  console.log("INPUT:", name, category);
 
-  if (error) return alert(error.message);
+  const { data, error } = await supabase
+    .from("items")
+    .insert([
+      { item_name: name, category: category }
+    ])
+    .select();
 
-  alert("Item added");
+  console.log("RESULT:", { data, error });
+
+  if (error) {
+    alert("SUPABASE ERROR: " + error.message);
+    return;
+  }
+
+  alert("ITEM ADDED SUCCESSFULLY");
   loadItems();
 }
 
