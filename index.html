@@ -11,10 +11,6 @@
       padding: 20px;
     }
 
-    h1 {
-      color: #333;
-    }
-
     .card {
       background: white;
       padding: 15px;
@@ -36,10 +32,6 @@
       border-radius: 5px;
     }
 
-    button:hover {
-      background: #0056b3;
-    }
-
     table {
       width: 100%;
       border-collapse: collapse;
@@ -52,13 +44,8 @@
       text-align: center;
     }
 
-    .expired {
-      background-color: #ffcccc;
-    }
-
-    .soon {
-      background-color: #fff3cd;
-    }
+    .expired { background: #ffcccc; }
+    .soon { background: #fff3cd; }
   </style>
 </head>
 
@@ -71,35 +58,31 @@
   <h3>Add Item</h3>
   <input id="itemName" placeholder="Item Name">
   <input id="category" placeholder="Category">
-  <button onclick="addItem()">Add Item</button>
+  <button id="addItemBtn">Add Item</button>
 </div>
 
 <!-- STOCK IN -->
 <div class="card">
-  <h3>Stock IN (New Batch)</h3>
-
+  <h3>Stock IN</h3>
   <select id="itemSelect"></select>
   <input id="batchNo" placeholder="Batch No">
   <input id="expiryDate" type="date">
   <input id="qtyIn" type="number" placeholder="Quantity">
-
-  <button onclick="stockIn()">Add Batch</button>
+  <button id="stockInBtn">Add Batch</button>
 </div>
 
 <!-- STOCK OUT -->
 <div class="card">
-  <h3>Stock OUT (Auto FIFO)</h3>
-
+  <h3>Stock OUT</h3>
   <select id="itemSelectOut"></select>
   <input id="qtyOut" type="number" placeholder="Quantity">
-
-  <button onclick="stockOut()">Remove Stock</button>
+  <button id="stockOutBtn">Remove Stock</button>
 </div>
 
 <!-- INVENTORY -->
 <div class="card">
-  <h3>Inventory View</h3>
-  <button onclick="loadInventory()">Refresh</button>
+  <h3>Inventory</h3>
+  <button id="refreshBtn">Refresh</button>
 
   <table>
     <thead>
@@ -121,25 +104,27 @@ const supabase = window.supabase.createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxam91Y3NjZ2hjdm5ldWR5d2xzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTYzMjgsImV4cCI6MjA5MDQzMjMyOH0.lttMVg3alSreRBPkrmdLK07kKlGAu3W7MYtJypKDSLg"
 );
 
-// LOAD ITEMS INTO DROPDOWN
+// LOAD ITEMS
 async function loadItems() {
-  const { data } = await supabase.from("items").select("*");
+  const { data, error } = await supabase.from("items").select("*");
 
-  const selectIn = document.getElementById("itemSelect");
-  const selectOut = document.getElementById("itemSelectOut");
+  if (error) {
+    console.error(error);
+    return;
+  }
 
-  selectIn.innerHTML = "";
-  selectOut.innerHTML = "";
+  const inSel = document.getElementById("itemSelect");
+  const outSel = document.getElementById("itemSelectOut");
+
+  inSel.innerHTML = "";
+  outSel.innerHTML = "";
 
   data.forEach(item => {
-    let opt1 = document.createElement("option");
-    opt1.value = item.id;
-    opt1.text = item.item_name;
+    let opt1 = new Option(item.item_name, item.id);
+    let opt2 = new Option(item.item_name, item.id);
 
-    let opt2 = opt1.cloneNode(true);
-
-    selectIn.appendChild(opt1);
-    selectOut.appendChild(opt2);
+    inSel.add(opt1);
+    outSel.add(opt2);
   });
 }
 
@@ -148,9 +133,11 @@ async function addItem() {
   const name = document.getElementById("itemName").value;
   const category = document.getElementById("category").value;
 
-  await supabase.from("items").insert([
-    { item_name: name, category: category }
+  const { error } = await supabase.from("items").insert([
+    { item_name: name, category }
   ]);
+
+  if (error) return alert(error.message);
 
   alert("Item added");
   loadItems();
@@ -163,32 +150,23 @@ async function stockIn() {
   const expiry = document.getElementById("expiryDate").value;
   const qty = document.getElementById("qtyIn").value;
 
-  const { data: batch } = await supabase
+  const { data: batch, error } = await supabase
     .from("batches")
-    .insert([
-      {
-        item_id: itemId,
-        batch_no: batchNo,
-        expiry_date: expiry,
-        quantity: 0
-      }
-    ])
+    .insert([{ item_id: itemId, batch_no: batchNo, expiry_date: expiry, quantity: 0 }])
     .select()
     .single();
 
+  if (error) return alert(error.message);
+
   await supabase.from("transactions").insert([
-    {
-      batch_id: batch.id,
-      quantity: qty,
-      type: "IN"
-    }
+    { batch_id: batch.id, quantity: qty, type: "IN" }
   ]);
 
-  alert("Stock IN successful");
+  alert("Stock IN done");
   loadInventory();
 }
 
-// STOCK OUT (FIFO handled in backend)
+// STOCK OUT
 async function stockOut() {
   const itemId = document.getElementById("itemSelectOut").value;
   const qty = document.getElementById("qtyOut").value;
@@ -199,30 +177,26 @@ async function stockOut() {
     .eq("item_id", itemId)
     .limit(1);
 
-  if (!data.length) {
-    alert("No stock available");
-    return;
-  }
+  if (!data.length) return alert("No stock");
 
   const { error } = await supabase.from("transactions").insert([
-    {
-      batch_id: data[0].id,
-      quantity: qty,
-      type: "OUT"
-    }
+    { batch_id: data[0].id, quantity: qty, type: "OUT" }
   ]);
 
-  if (error) {
-    alert(error.message);
-  } else {
-    alert("Stock OUT successful");
-    loadInventory();
-  }
+  if (error) return alert(error.message);
+
+  alert("Stock OUT done");
+  loadInventory();
 }
 
-// LOAD INVENTORY TABLE
+// LOAD INVENTORY
 async function loadInventory() {
-  const { data } = await supabase.from("inventory_view").select("*");
+  const { data, error } = await supabase.from("inventory_view").select("*");
+
+  if (error) {
+    console.error(error);
+    return;
+  }
 
   const table = document.getElementById("inventoryTable");
   table.innerHTML = "";
@@ -230,11 +204,8 @@ async function loadInventory() {
   data.forEach(row => {
     const tr = document.createElement("tr");
 
-    if (row.status === "EXPIRED") {
-      tr.classList.add("expired");
-    } else if (row.status === "EXPIRING SOON") {
-      tr.classList.add("soon");
-    }
+    if (row.status === "EXPIRED") tr.classList.add("expired");
+    if (row.status === "EXPIRING SOON") tr.classList.add("soon");
 
     tr.innerHTML = `
       <td>${row.item_name}</td>
@@ -248,7 +219,13 @@ async function loadInventory() {
   });
 }
 
-// INITIAL LOAD
+// EVENTS (NO MORE onclick)
+document.getElementById("addItemBtn").addEventListener("click", addItem);
+document.getElementById("stockInBtn").addEventListener("click", stockIn);
+document.getElementById("stockOutBtn").addEventListener("click", stockOut);
+document.getElementById("refreshBtn").addEventListener("click", loadInventory);
+
+// INIT
 loadItems();
 loadInventory();
 </script>
