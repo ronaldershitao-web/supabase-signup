@@ -644,8 +644,8 @@ async function loadExpiry() {
   async function loadMonitor() {
 
   const { data, error } = await supabaseClient
-    .from("inventory_view")
-    .select("*")
+  .from("inventory_view")
+  .select("*");
     .order("material_code", { ascending: true });
 
   if (error) return console.error(error);
@@ -666,7 +666,12 @@ async function loadExpiry() {
   <td>${r.batch_no || '-'}</td>
   <td>${r.quantity}</td>
   <td>${r.uom}</td>
-  <td>${r.hu_code || 'NO HU'}</td>
+  <td>
+  ${r.hu_code || 'NO HU'} <br>
+  <small style="color:gray;">
+    TOP: ${r.highest_hu || r.hu_code || 'NO HU'}
+  </small>
+</td>
    <td>
     <button onclick="assignSingleHU(${r.stock_id})">
       Assign HU
