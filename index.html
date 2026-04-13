@@ -727,6 +727,24 @@ async function loadExpiry() {
     loadMonitor();
   }
 }
+
+  async function updateStockHU(stockIds, huId) {
+
+  const { error } = await supabaseClient
+    .from("stock_lines")
+    .update({
+      hu_id: huId
+    })
+    .in("id", stockIds);
+
+  if (error) {
+    console.error(error);
+    alert(error.message);
+    return false;
+  }
+
+  return true;
+}
   
   
 // =====================
