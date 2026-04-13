@@ -135,15 +135,16 @@
 
   <table>
     <thead>
-      <tr>
-        <th>Material</th>
-        <th>Batch</th>
-        <th>Expiry</th>
-        <th>Qty</th>
-        <th>Days Left</th>
-        <th>Status</th>
-      </tr>
-    </thead>
+  <tr>
+    <th>Material No</th>
+    <th>Description</th>
+    <th>Batch</th>
+    <th>Expiry</th>
+    <th>Qty</th>
+    <th>Days Left</th>
+    <th>Status</th>
+  </tr>
+</thead>
     <tbody id="expiryTable"></tbody>
   </table>
 </div>
@@ -351,24 +352,19 @@ async function loadExpiry() {
 
   const today = new Date();
 
-  // =========================
-  // 1. PROCESS DATA FIRST
-  // =========================
   const processed = data
     .filter(r => r.expiry_date)
     .map(r => {
-      const exp = new Date(r.expiry_date);
 
+      const exp = new Date(r.expiry_date);
       const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
 
-      // format date DD-MMM-YYYY
       const formattedDate = exp.toLocaleDateString('en-GB', {
         day: '2-digit',
         month: 'short',
         year: 'numeric'
       });
 
-      // status rules
       let status = "OK";
       let color = "green";
 
@@ -390,21 +386,15 @@ async function loadExpiry() {
         status,
         color
       };
-    });
+    })
+    .sort((a, b) => a.days_left - b.days_left);
 
-  // =========================
-  // 2. SORT BY DAYS LEFT ASC
-  // =========================
-  processed.sort((a, b) => a.days_left - b.days_left);
-
-  // =========================
-  // 3. RENDER TABLE
-  // =========================
   processed.forEach(r => {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-      <td>${r.material_code} - ${r.description}</td>
+      <td>${r.material_code}</td>
+      <td>${r.description}</td>
       <td>${r.batch_no || '-'}</td>
       <td>${r.expiry_date}</td>
       <td>${r.quantity}</td>
