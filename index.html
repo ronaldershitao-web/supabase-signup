@@ -1,23 +1,22 @@
-```html
+
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Inventory (Batch + Expiry)</title>
+  <title>SAP Style Inventory</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     body {
       font-family: Arial;
-      background: #f4f6f8;
+      background: #eef1f5;
       padding: 20px;
     }
 
     .card {
       background: white;
       padding: 15px;
-      margin-bottom: 15px;
+      margin-top: 15px;
       border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
 
     input, select, button {
@@ -25,72 +24,71 @@
       margin: 5px;
     }
 
-    button {
-      background: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
+    .command-bar {
+      background: black;
+      padding: 10px;
       border-radius: 5px;
+    }
+
+    .command-bar input {
+      width: 300px;
+      background: black;
+      color: lime;
+      border: none;
+      font-family: monospace;
     }
 
     table {
       width: 100%;
-      border-collapse: collapse;
       margin-top: 10px;
+      border-collapse: collapse;
     }
 
     th, td {
       border: 1px solid #ddd;
-      padding: 8px;
+      padding: 6px;
       text-align: center;
     }
-
-    .expired { background: #ffcccc; }
-    .soon { background: #fff3cd; }
   </style>
 </head>
 
 <body>
 
-<h1>📦 Inventory System</h1>
+<h2>📦 Inventory System (SAP Style)</h2>
 
-<!-- NAVIGATION -->
-<div class="card">
-  <button onclick="showScreen('items')">Items</button>
-  <button onclick="showScreen('stockin')">Stock In</button>
-  <button onclick="showScreen('stockout')">Stock Out</button>
-  <button onclick="showScreen('inventory')">Inventory</button>
+<!-- COMMAND BAR -->
+<div class="command-bar">
+  <input id="tcodeInput" placeholder="Enter T-Code (e.g. /mm01)">
+  <button id="goBtn">Enter</button>
 </div>
 
-<!-- ITEMS -->
-<div id="itemsScreen" class="card">
-  <h3>Add Item</h3>
+<!-- SCREENS -->
+
+<div id="mm01" class="card">
+  <h3>/MM01 - Create Item</h3>
   <input id="itemName" placeholder="Item Name">
   <input id="category" placeholder="Category">
-  <button id="addItemBtn">Add Item</button>
+  <button id="addItemBtn">Create</button>
 </div>
 
-<!-- STOCK IN -->
-<div id="stockinScreen" class="card" style="display:none;">
-  <h3>Stock IN</h3>
+<div id="migo" class="card" style="display:none;">
+  <h3>/MIGO - Stock In</h3>
   <select id="itemSelect"></select>
-  <input id="batchNo" placeholder="Batch No">
+  <input id="batchNo" placeholder="Batch">
   <input id="expiryDate" type="date">
-  <input id="qtyIn" type="number" placeholder="Quantity">
-  <button id="stockInBtn">Add Batch</button>
+  <input id="qtyIn" type="number" placeholder="Qty">
+  <button id="stockInBtn">Post</button>
 </div>
 
-<!-- STOCK OUT -->
-<div id="stockoutScreen" class="card" style="display:none;">
-  <h3>Stock OUT</h3>
+<div id="mb1a" class="card" style="display:none;">
+  <h3>/MB1A - Stock Out</h3>
   <select id="itemSelectOut"></select>
-  <input id="qtyOut" type="number" placeholder="Quantity">
-  <button id="stockOutBtn">Remove Stock</button>
+  <input id="qtyOut" type="number" placeholder="Qty">
+  <button id="stockOutBtn">Post</button>
 </div>
 
-<!-- INVENTORY -->
-<div id="inventoryScreen" class="card" style="display:none;">
-  <h3>Inventory</h3>
+<div id="mb52" class="card" style="display:none;">
+  <h3>/MB52 - Inventory</h3>
   <button id="refreshBtn">Refresh</button>
 
   <table>
@@ -100,7 +98,6 @@
         <th>Batch</th>
         <th>Expiry</th>
         <th>Qty</th>
-        <th>Status</th>
       </tr>
     </thead>
     <tbody id="inventoryTable"></tbody>
@@ -108,37 +105,50 @@
 </div>
 
 <script>
-const supabase = window.supabase.createClient(
+// =====================
+// SUPABASE INIT (ONLY ONCE)
+// =====================
+const supabaseClient = window.supabase.createClient(
   "https://vqjoucscghcvneudywls.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxam91Y3NjZ2hjdm5ldWR5d2xzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTYzMjgsImV4cCI6MjA5MDQzMjMyOH0.lttMVg3alSreRBPkrmdLK07kKlGAu3W7MYtJypKDSLg"
 );
 
 // =====================
-// SCREEN CONTROL (SAP STYLE)
+// SCREEN CONTROL
 // =====================
-function showScreen(screen) {
-  document.getElementById("itemsScreen").style.display = "none";
-  document.getElementById("stockinScreen").style.display = "none";
-  document.getElementById("stockoutScreen").style.display = "none";
-  document.getElementById("inventoryScreen").style.display = "none";
+function showScreen(code) {
+  ["mm01","migo","mb1a","mb52"].forEach(id => {
+    document.getElementById(id).style.display = "none";
+  });
 
-  document.getElementById(screen + "Screen").style.display = "block";
+  const screen = code.replace("/", "");
+  const el = document.getElementById(screen);
 
-  // Lazy load
-  if (screen === "stockin" || screen === "stockout") {
-    loadItems();
+  if (!el) {
+    alert("Invalid T-Code");
+    return;
   }
 
-  if (screen === "inventory") {
-    loadInventory();
-  }
+  el.style.display = "block";
+
+  // Lazy loading
+  if (screen === "migo" || screen === "mb1a") loadItems();
+  if (screen === "mb52") loadInventory();
+}
+
+// =====================
+// T-CODE HANDLER
+// =====================
+function handleTcode() {
+  const input = document.getElementById("tcodeInput").value.toLowerCase();
+  showScreen(input);
 }
 
 // =====================
 // LOAD ITEMS
 // =====================
 async function loadItems() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from("items")
     .select("id, item_name");
 
@@ -150,30 +160,30 @@ async function loadItems() {
   inSel.innerHTML = "";
   outSel.innerHTML = "";
 
-  data.forEach(item => {
-    inSel.add(new Option(item.item_name, item.id));
-    outSel.add(new Option(item.item_name, item.id));
+  data.forEach(i => {
+    inSel.add(new Option(i.item_name, i.id));
+    outSel.add(new Option(i.item_name, i.id));
   });
 }
 
 // =====================
-// ADD ITEM
+// CREATE ITEM (/MM01)
 // =====================
 async function addItem() {
   const name = document.getElementById("itemName").value;
   const category = document.getElementById("category").value;
 
-  const { error } = await supabase.from("items").insert([
-    { item_name: name, category }
-  ]);
+  const { error } = await supabaseClient
+    .from("items")
+    .insert([{ item_name: name, category }]);
 
   if (error) return alert(error.message);
 
-  alert("Item added");
+  alert("Material Created");
 }
 
 // =====================
-// STOCK IN (WITH BATCH CHECK)
+// STOCK IN (/MIGO)
 // =====================
 async function stockIn() {
   const itemId = document.getElementById("itemSelect").value;
@@ -183,7 +193,7 @@ async function stockIn() {
 
   let batchId;
 
-  const { data: existing } = await supabase
+  const { data: existing } = await supabaseClient
     .from("batches")
     .select("*")
     .eq("item_id", itemId)
@@ -193,7 +203,7 @@ async function stockIn() {
   if (existing) {
     batchId = existing.id;
   } else {
-    const { data: newBatch } = await supabase
+    const { data: newBatch } = await supabaseClient
       .from("batches")
       .insert([{
         item_id: itemId,
@@ -207,25 +217,21 @@ async function stockIn() {
     batchId = newBatch.id;
   }
 
-  await supabase.from("transactions").insert([
-    {
-      batch_id: batchId,
-      quantity: qty,
-      type: "IN"
-    }
+  await supabaseClient.from("transactions").insert([
+    { batch_id: batchId, quantity: qty, type: "IN" }
   ]);
 
-  alert("Stock IN done");
+  alert("Goods Receipt Posted");
 }
 
 // =====================
-// STOCK OUT (FIFO BASIC)
+// STOCK OUT (/MB1A)
 // =====================
 async function stockOut() {
   const itemId = document.getElementById("itemSelectOut").value;
   const qty = parseInt(document.getElementById("qtyOut").value);
 
-  const { data } = await supabase
+  const { data } = await supabaseClient
     .from("batches")
     .select("id")
     .eq("item_id", itemId)
@@ -235,24 +241,20 @@ async function stockOut() {
 
   if (!data.length) return alert("No stock");
 
-  await supabase.from("transactions").insert([
-    {
-      batch_id: data[0].id,
-      quantity: qty,
-      type: "OUT"
-    }
+  await supabaseClient.from("transactions").insert([
+    { batch_id: data[0].id, quantity: qty, type: "OUT" }
   ]);
 
-  alert("Stock OUT done");
+  alert("Goods Issue Posted");
 }
 
 // =====================
-// LOAD INVENTORY
+// INVENTORY (/MB52)
 // =====================
 async function loadInventory() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from("inventory_view")
-    .select("item_name, batch_no, expiry_date, quantity, status")
+    .select("item_name,batch_no,expiry_date,quantity")
     .limit(50);
 
   if (error) return console.error(error);
@@ -260,18 +262,14 @@ async function loadInventory() {
   const table = document.getElementById("inventoryTable");
   table.innerHTML = "";
 
-  data.forEach(row => {
+  data.forEach(r => {
     const tr = document.createElement("tr");
 
-    if (row.status === "EXPIRED") tr.classList.add("expired");
-    if (row.status === "EXPIRING SOON") tr.classList.add("soon");
-
     tr.innerHTML = `
-      <td>${row.item_name}</td>
-      <td>${row.batch_no}</td>
-      <td>${row.expiry_date}</td>
-      <td>${row.quantity}</td>
-      <td>${row.status}</td>
+      <td>${r.item_name}</td>
+      <td>${r.batch_no}</td>
+      <td>${r.expiry_date}</td>
+      <td>${r.quantity}</td>
     `;
 
     table.appendChild(tr);
@@ -279,15 +277,18 @@ async function loadInventory() {
 }
 
 // =====================
-// INIT
+// INIT (NO onclick, NO ERRORS)
 // =====================
 document.addEventListener("DOMContentLoaded", () => {
+
+  document.getElementById("goBtn").addEventListener("click", handleTcode);
   document.getElementById("addItemBtn").addEventListener("click", addItem);
   document.getElementById("stockInBtn").addEventListener("click", stockIn);
   document.getElementById("stockOutBtn").addEventListener("click", stockOut);
   document.getElementById("refreshBtn").addEventListener("click", loadInventory);
 
-  showScreen("items"); // default
+  showScreen("/mm01"); // default screen
+
 });
 </script>
 
