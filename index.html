@@ -174,7 +174,7 @@ function handleTcode() {
 async function loadItems() {
   const { data, error } = await supabaseClient
     .from("items")
-    .select("id, item_name");
+    .select("id, material_code, description");
 
   if (error) return console.error(error);
 
@@ -185,8 +185,10 @@ async function loadItems() {
   outSel.innerHTML = "";
 
   data.forEach(i => {
-    inSel.add(new Option(i.item_name, i.id));
-    outSel.add(new Option(i.item_name, i.id));
+    const label = `${i.material_code} - ${i.description}`;
+
+    inSel.add(new Option(label, i.id));
+    outSel.add(new Option(label, i.id));
   });
 }
 
@@ -223,37 +225,23 @@ async function stockIn() {
   const expiry = document.getElementById("expiryDate").value;
   const qty = parseInt(document.getElementById("qtyIn").value);
 
-  let batchId;
+  const { error } = await supabaseClient
+    .from("stock_lines")
+    .insert([{
+      item_id: itemId,
+      batch_no: batchNo,
+      expiry_date: expiry,
+      stock_type: "IN",
+      quantity: qty,
+      uom: "EA",
+      packaging_level: "BOX",
+      reference: "MIGO"
+    }]);
 
-  const { data: existing } = await supabaseClient
-    .from("batches")
-    .select("*")
-    .eq("item_id", itemId)
-    .eq("batch_no", batchNo)
-    .maybeSingle();
-
-  if (existing) {
-    batchId = existing.id;
-  } else {
-    const { data: newBatch } = await supabaseClient
-      .from("batches")
-      .insert([{
-        item_id: itemId,
-        batch_no: batchNo,
-        expiry_date: expiry,
-        quantity: 0
-      }])
-      .select()
-      .single();
-
-    batchId = newBatch.id;
-  }
-
-  await supabaseClient.from("transactions").insert([
-    { batch_id: batchId, quantity: qty, type: "IN" }
-  ]);
+  if (error) return alert(error.message);
 
   alert("Goods Receipt Posted");
+  loadInventory();
 }
 
 // =====================
@@ -263,21 +251,19 @@ async function stockOut() {
   const itemId = document.getElementById("itemSelectOut").value;
   const qty = parseInt(document.getElementById("qtyOut").value);
 
-  const { data } = await supabaseClient
-    .from("batches")
-    .select("id")
-    .eq("item_id", itemId)
-    .gt("quantity", 0)
-    .order("expiry_date", { ascending: true })
-    .limit(1);
+  const { error } = await supabaseClient
+    .from("stock_lines")
+    .insert([{
+      item_id: itemId,
+      stock_type: "OUT",
+      quantity: qty,
+      reference: "MB1A"
+    }]);
 
-  if (!data.length) return alert("No stock");
-
-  await supabaseClient.from("transactions").insert([
-    { batch_id: data[0].id, quantity: qty, type: "OUT" }
-  ]);
+  if (error) return alert(error.message);
 
   alert("Goods Issue Posted");
+  loadInventory();
 }
 
 // =====================
@@ -286,8 +272,8 @@ async function stockOut() {
 async function loadInventory() {
   const { data, error } = await supabaseClient
     .from("inventory_view")
-    .select("item_name,batch_no,expiry_date,quantity")
-    .limit(50);
+    .select("*")
+    .limit(100);
 
   if (error) return console.error(error);
 
@@ -298,9 +284,9 @@ async function loadInventory() {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-      <td>${r.item_name}</td>
-      <td>${r.batch_no}</td>
-      <td>${r.expiry_date}</td>
+      <td>${r.material_code}</td>
+      <td>${r.batch_no || ''}</td>
+      <td>${r.expiry_date || ''}</td>
       <td>${r.quantity}</td>
     `;
 
