@@ -410,7 +410,7 @@ async function loadInventory() {
       const header = document.createElement("tr");
       header.innerHTML = `
         <td colspan="5" style="background:#222; color:white; font-weight:bold;">
-          ${r.material_code} - ${r.description}
+          ${r.material_code} - ${r.material_description}
         </td>
       `;
       table.appendChild(header);
@@ -473,7 +473,7 @@ async function loadExpiry() {
 
       return {
         material_code: r.material_code,
-        description: r.description,
+        description: r.material_description,
         batch_no: r.batch_no,
         expiry_date: formattedDate,
         quantity: r.quantity,
@@ -489,7 +489,7 @@ async function loadExpiry() {
 
     tr.innerHTML = `
       <td>${r.material_code}</td>
-      <td>${r.description}</td>
+      <td>${r.material_description}</td>
       <td>${r.batch_no || '-'}</td>
       <td>${r.expiry_date}</td>
       <td>${r.quantity}</td>
