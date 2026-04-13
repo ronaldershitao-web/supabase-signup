@@ -149,6 +149,39 @@
   </table>
 </div>
 
+  <div id="config" class="card" style="display:none;">
+  <h3>SPRO - Warehouse Configuration</h3>
+
+  <!-- LOCATION -->
+  <h4>Location</h4>
+  <input id="loc_code" placeholder="Location Code (SR, LR)">
+  <input id="loc_name" placeholder="Location Name">
+  <select id="loc_type">
+    <option>STORAGE</option>
+    <option>ROOM</option>
+  </select>
+  <button id="createLocationBtn">Create Location</button>
+
+  <hr>
+
+  <!-- SECTION -->
+  <h4>Section</h4>
+  <select id="section_location"></select>
+  <input id="section_code" placeholder="Section Code (A, B, ROW1)">
+  <input id="section_name" placeholder="Section Name">
+  <button id="createSectionBtn">Create Section</button>
+
+  <hr>
+
+  <!-- BIN -->
+  <h4>Bin</h4>
+  <select id="bin_location"></select>
+  <select id="bin_section"></select>
+  <input id="bin_code" placeholder="Bin Code (A1, B2)">
+  <input id="bin_name" placeholder="Bin Name">
+  <button id="createBinBtn">Create Bin</button>
+</div>
+
 <script>
 // =====================
 // SUPABASE INIT (ONLY ONCE)
@@ -162,7 +195,7 @@ const supabaseClient = window.supabase.createClient(
 // SCREEN CONTROL
 // =====================
 function showScreen(code) {
-  ["mm01","migo","mb1a","mb52","mb53"].forEach(id => {
+  ["mm01","migo","mb1a","mb52","mb53","spro"].forEach(id => {
     document.getElementById(id).style.display = "none";
   });
 
@@ -179,6 +212,7 @@ function showScreen(code) {
   if (screen === "migo" || screen === "mb1a") loadItems();
   if (screen === "mb52") loadInventory();
   if (screen === "mb53") loadExpiry();
+  if (screen === "spro") loadConfigDropdowns();
 }
 
 // =====================
@@ -407,6 +441,99 @@ async function loadExpiry() {
     table.appendChild(tr);
   });
 }
+
+  // =========================
+    // SPRO
+    // =========================
+
+  async function loadConfigDropdowns() {
+
+  // LOAD LOCATIONS
+  const { data: locs } = await supabaseClient
+    .from("warehouse_locations")
+    .select("*");
+
+  const locSel1 = document.getElementById("section_location");
+  const locSel2 = document.getElementById("bin_location");
+
+  locSel1.innerHTML = "";
+  locSel2.innerHTML = "";
+
+  locs.forEach(l => {
+    locSel1.add(new Option(l.location_name, l.id));
+    locSel2.add(new Option(l.location_name, l.id));
+  });
+
+  // LOAD SECTIONS
+  const { data: secs } = await supabaseClient
+    .from("warehouse_sections")
+    .select("*");
+
+  const secSel = document.getElementById("bin_section");
+  secSel.innerHTML = "";
+
+  secs.forEach(s => {
+    secSel.add(new Option(s.section_code + " - " + s.section_name, s.id));
+  });
+}
+ // =========================
+    // Create Location
+    // =========================
+  async function createLocation() {
+  const { error } = await supabaseClient
+    .from("warehouse_locations")
+    .insert([{
+      location_code: document.getElementById("loc_code").value,
+      location_name: document.getElementById("loc_name").value,
+      location_type: document.getElementById("loc_type").value
+    }]);
+
+  if (error) return alert(error.message);
+
+  alert("Location Created");
+  loadConfigDropdowns();
+}
+
+// =========================
+    // Create Section
+    // =========================
+  
+  async function createSection() {
+  const { error } = await supabaseClient
+    .from("warehouse_sections")
+    .insert([{
+      location_id: document.getElementById("section_location").value,
+      section_code: document.getElementById("section_code").value,
+      section_name: document.getElementById("section_name").value
+    }]);
+
+  if (error) return alert(error.message);
+
+  alert("Section Created");
+  loadConfigDropdowns();
+}
+// =========================
+    // Create Bin
+    // =========================
+
+  
+  async function createBin() {
+  const { error } = await supabaseClient
+    .from("warehouse_bins")
+    .insert([{
+      location_id: document.getElementById("bin_location").value,
+      section_id: document.getElementById("bin_section").value,
+      bin_code: document.getElementById("bin_code").value,
+      bin_name: document.getElementById("bin_name").value
+    }]);
+
+  if (error) return alert(error.message);
+
+  alert("Bin Created");
+  loadConfigDropdowns();
+}
+
+  
   
 // =====================
 // INIT (NO onclick, NO ERRORS)
@@ -419,6 +546,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("stockOutBtn").addEventListener("click", stockOut);
   document.getElementById("refreshBtn").addEventListener("click", loadInventory);
   document.getElementById("refreshExpiryBtn").addEventListener("click", loadExpiry);
+  document.getElementById("createLocationBtn").addEventListener("click", createLocation);
+document.getElementById("createSectionBtn").addEventListener("click", createSection);
+document.getElementById("createBinBtn").addEventListener("click", createBin);
 
   showScreen("/mm01"); // default screen
 
