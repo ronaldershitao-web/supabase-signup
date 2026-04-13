@@ -583,19 +583,23 @@ async function loadExpiry() {
   });
 }
 
-  async function createHU() {
-  const { error } = await supabaseClient
+ async function createHU() {
+  const { data, error } = await supabaseClient
     .from("handling_units")
     .insert([{
-      hu_code: document.getElementById("hu_code").value,
+      // ❌ REMOVE THIS LINE
+      // hu_code: document.getElementById("hu_code").value,
+
       hu_type: document.getElementById("hu_type").value,
       parent_hu_id: document.getElementById("parent_hu").value || null,
       location_id: document.getElementById("location_select").value
-    }]);
+    }])
+    .select()
+    .single();
 
   if (error) return alert(error.message);
 
-  alert("HU Created");
+  alert("HU Created: " + data.hu_code); // ✅ show auto-generated
   loadHUConfig();
 }
   
