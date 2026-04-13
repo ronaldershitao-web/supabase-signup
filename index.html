@@ -201,6 +201,33 @@
   <button id="createHuBtn">Create HU</button>
 </div>
 
+  <div id="scwmmon" class="card" style="display:none;">
+  <h3>/SCWM/MON - Warehouse Monitor</h3>
+
+  <!-- FILTER -->
+  <select id="mon_bin"></select>
+  <button id="loadMonBtn">Load</button>
+
+  <!-- STOCK TABLE -->
+  <table>
+    <thead>
+      <tr>
+        <th>Select</th>
+        <th>Material</th>
+        <th>Batch</th>
+        <th>Qty</th>
+        <th>HU</th>
+      </tr>
+    </thead>
+    <tbody id="monTable"></tbody>
+  </table>
+
+  <!-- ACTION -->
+  <h4>Assign to HU</h4>
+  <select id="assignHU"></select>
+  <button id="assignHuBtn">Assign Selected</button>
+</div>
+
 <script>
 // =====================
 // SUPABASE INIT (ONLY ONCE)
@@ -233,6 +260,7 @@ function showScreen(code) {
   if (screen === "mb53") loadExpiry();
   if (screen === "spro") loadConfigDropdowns();
   if (screen === "hu01") loadHUConfig();
+  if (screen === "scwmmon") {loadMonitor();loadHUList();}
 }
 
 // =====================
@@ -602,6 +630,83 @@ async function loadExpiry() {
   alert("HU Created: " + data.hu_code); // ✅ show auto-generated
   loadHUConfig();
 }
+
+  // =========================
+    // Warehouse Monitor
+    // =========================
+  
+  async function loadMonitor() {
+
+  const { data, error } = await supabaseClient
+    .from("inventory_view")
+    .select("*")
+    .order("material_code", { ascending: true });
+
+  if (error) return console.error(error);
+
+  const table = document.getElementById("monTable");
+  table.innerHTML = "";
+
+  data.forEach(r => {
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td><input type="checkbox" class="stockSelect" value="${r.id}"></td>
+      <td>${r.material_code}</td>
+      <td>${r.batch_no || '-'}</td>
+      <td>${r.quantity}</td>
+      <td>${r.hu_code || 'NO HU'}</td>
+    `;
+
+    table.appendChild(tr);
+  });
+}
+
+  async function loadHUList() {
+  const { data } = await supabaseClient
+    .from("handling_units")
+    .select("id, hu_code");
+
+  const sel = document.getElementById("assignHU");
+  sel.innerHTML = "";
+
+  data.forEach(h => {
+    sel.add(new Option(h.hu_code, h.id));
+  });
+}
+
+
+  async function assignToHU() {
+
+  const huId = document.getElementById("assignHU").value;
+
+  const selected = document.querySelectorAll(".stockSelect:checked");
+
+  if (selected.length === 0) {
+    alert("Select at least 1 row");
+    return;
+  }
+
+  for (let row of selected) {
+
+    const stockId = row.value;
+
+    const { error } = await supabaseClient
+      .from("stock_lines")
+      .update({ hu_id: huId })
+      .eq("id", stockId);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+  }
+
+  alert("Assigned to HU");
+  loadMonitor();
+}
+  
   
   
 // =====================
@@ -619,6 +724,8 @@ document.addEventListener("DOMContentLoaded", () => {
 document.getElementById("createSectionBtn").addEventListener("click", createSection);
 document.getElementById("createBinBtn").addEventListener("click", createBin);
   document.getElementById("createHuBtn").addEventListener("click", createHU);
+  document.getElementById("loadMonBtn").addEventListener("click", loadMonitor);
+document.getElementById("assignHuBtn").addEventListener("click", assignToHU);
 
   showScreen("/mm01"); // default screen
 
