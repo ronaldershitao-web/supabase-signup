@@ -658,7 +658,7 @@ async function loadExpiry() {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-  <td><input type="checkbox" class="stockSelect" value="${r.stock_id}"></td>
+  <td><input type="checkbox" class="stockSelect" value="${r.stock_id || r.id}""></td>
 <td>${r.bin_code || 'NO BIN'}</td>
   <td>${r.material_code}</td>
   <td>${r.material_description}</td>
@@ -699,17 +699,30 @@ async function loadExpiry() {
 
   const huId = document.getElementById("assignHU").value;
 
+  console.log("Selected stock IDs:", selected); // DEBUG
+
   if (!selected.length || !huId) {
     alert("Select Stock + HU first");
     return;
   }
 
-  const ok = await updateStockHU(selected, huId);
+  const { data, error } = await supabaseClient
+    .from("stock_lines")
+    .update({ hu_id: huId })
+    .in("id", selected)
+    .select(); // IMPORTANT for debugging
 
-  if (ok) {
-    alert("Stock assigned to HU");
-    loadMonitor();
+  if (error) {
+    console.error(error);
+    alert(error.message);
+    return;
   }
+
+  console.log("Updated rows:", data);
+
+  alert(`HU assigned to ${data.length} stock lines`);
+
+  await loadMonitor(); // FORCE refresh UI
 }
   async function assignSingleHU(stockId) {
 
@@ -720,12 +733,21 @@ async function loadExpiry() {
     return;
   }
 
-  const ok = await updateStockHU([stockId], huId);
+  const { data, error } = await supabaseClient
+    .from("stock_lines")
+    .update({ hu_id: huId })
+    .eq("id", stockId)
+    .select();
 
-  if (ok) {
-    alert("Assigned to HU");
-    loadMonitor();
+  if (error) {
+    console.error(error);
+    alert(error.message);
+    return;
   }
+
+  alert("Assigned to HU");
+
+  await loadMonitor(); // refresh UI
 }
 
   async function updateStockHU(stockIds, huId) {
