@@ -645,8 +645,8 @@ async function loadExpiry() {
 
   const { data, error } = await supabaseClient
   .from("inventory_view")
-  .select("*");
-    .order("material_code", { ascending: true });
+  .select("*")
+  .order("material_code", { ascending: true });
 
   if (error) return console.error(error);
 
