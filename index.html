@@ -215,8 +215,9 @@
         <th>Select</th>
         <th>Storage Bin</th>
         <th>Material</th>
+        <th>Material Description</th>
+        <th>Stock Type</th>
 <th>Batch</th>
-<th>Expiry</th>
 <th>Qty</th>
 <th>UoM</th>
 <th>Bin</th>
@@ -661,11 +662,11 @@ async function loadExpiry() {
 <td>${r.bin_code || 'NO BIN'}</td>
   <td>${r.material_code}</td>
   <td>${r.description}</td>
-
   <td>${r.stock_type}</td>
-
   <td>${r.batch_no || '-'}</td>
   <td>${r.quantity}</td>
+  <td>${r.uom}</td>
+  <td>${r.bin_code}</td>
   <td>${r.hu_code || 'NO HU'}</td>
 `;
 
