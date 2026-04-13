@@ -68,22 +68,28 @@
   <h3>/MM01 - Create Material</h3>
 
   <h4>Basic Data</h4>
-  <input id="material_code" placeholder="Material Code">
   <input id="description" placeholder="Description">
   <input id="unit" placeholder="Unit (EA/KG)">
-  <input id="material_type" placeholder="Type (RAW/FG)">
+  <select id="material_type">
+    <option value="RAW">RAW</option>
+    <option value="FG">FG</option>
+  </select>
 
-  <h4>Plant Data</h4>
-  <input id="plant" placeholder="Plant">
-  <input id="storage_location" placeholder="Storage Location">
+  <h4>Plant</h4>
+  <select id="plant">
+    <option value="SG01">SG01</option>
+    <option value="SG02">SG02</option>
+  </select>
 
-  <h4>Purchasing</h4>
-  <input id="vendor" placeholder="Vendor">
-  <input id="purchasing_group" placeholder="Purchasing Group">
-
-  <h4>Inventory</h4>
+  <h4>Inventory Control</h4>
   <label>Batch Managed</label>
   <input type="checkbox" id="batch_managed" checked>
+
+  <label>Cycle Count Required</label>
+  <input type="checkbox" id="cycle_count_required">
+
+  <input id="reorder_point" type="number" placeholder="Reorder Point">
+
   <input id="shelf_life" type="number" placeholder="Shelf Life (days)">
 
   <button id="addItemBtn">Create Material</button>
@@ -189,15 +195,13 @@ async function loadItems() {
 // =====================
 async function addItem() {
   const data = {
-    material_code: document.getElementById("material_code").value,
     description: document.getElementById("description").value,
     unit: document.getElementById("unit").value,
     material_type: document.getElementById("material_type").value,
     plant: document.getElementById("plant").value,
-    storage_location: document.getElementById("storage_location").value,
-    vendor: document.getElementById("vendor").value,
-    purchasing_group: document.getElementById("purchasing_group").value,
     batch_managed: document.getElementById("batch_managed").checked,
+    cycle_count_required: document.getElementById("cycle_count_required").checked,
+    reorder_point: parseInt(document.getElementById("reorder_point").value || 0),
     shelf_life: parseInt(document.getElementById("shelf_life").value || 0)
   };
 
@@ -205,12 +209,9 @@ async function addItem() {
     .from("items")
     .insert([data]);
 
-  if (error) {
-    alert(error.message);
-    return;
-  }
+  if (error) return alert(error.message);
 
-  alert("Material Created Successfully");
+  alert("Material Created (Auto Code Generated)");
 }
 
 // =====================
