@@ -129,6 +129,25 @@
   </table>
 </div>
 
+  <div id="mb53" class="card" style="display:none;">
+  <h3>/MB53 - Expiry Monitor</h3>
+  <button id="refreshExpiryBtn">Refresh</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Material</th>
+        <th>Batch</th>
+        <th>Expiry</th>
+        <th>Qty</th>
+        <th>Days Left</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="expiryTable"></tbody>
+  </table>
+</div>
+
 <script>
 // =====================
 // SUPABASE INIT (ONLY ONCE)
@@ -142,7 +161,7 @@ const supabaseClient = window.supabase.createClient(
 // SCREEN CONTROL
 // =====================
 function showScreen(code) {
-  ["mm01","migo","mb1a","mb52"].forEach(id => {
+  ["mm01","migo","mb1a","mb52","mb53"].forEach(id => {
     document.getElementById(id).style.display = "none";
   });
 
@@ -156,9 +175,9 @@ function showScreen(code) {
 
   el.style.display = "block";
 
-  // Lazy loading
   if (screen === "migo" || screen === "mb1a") loadItems();
   if (screen === "mb52") loadInventory();
+  if (screen === "mb53") loadExpiry();
 }
 
 // =====================
@@ -317,7 +336,54 @@ async function loadInventory() {
     table.appendChild(tr);
   });
 }
+// =========================
+    // Expiry
+    // =========================
+async function loadExpiry() {
+  const { data, error } = await supabaseClient
+    .from("inventory_view")
+    .select("*");
 
+  if (error) return console.error(error);
+
+  const table = document.getElementById("expiryTable");
+  table.innerHTML = "";
+
+  const today = new Date();
+
+  data.forEach(r => {
+
+    if (!r.expiry_date) return;
+
+    const exp = new Date(r.expiry_date);
+    const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+
+    let status = "OK";
+    let color = "green";
+
+    if (diffDays < 0) {
+      status = "EXPIRED";
+      color = "red";
+    } else if (diffDays <= 7) {
+      status = "SOON";
+      color = "orange";
+    }
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${r.material_code} - ${r.description}</td>
+      <td>${r.batch_no || '-'}</td>
+      <td>${r.expiry_date}</td>
+      <td>${r.quantity}</td>
+      <td>${diffDays}</td>
+      <td style="color:${color}; font-weight:bold;">${status}</td>
+    `;
+
+    table.appendChild(tr);
+  });
+}
+  
 // =====================
 // INIT (NO onclick, NO ERRORS)
 // =====================
@@ -328,6 +394,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("stockInBtn").addEventListener("click", stockIn);
   document.getElementById("stockOutBtn").addEventListener("click", stockOut);
   document.getElementById("refreshBtn").addEventListener("click", loadInventory);
+  document.getElementById("refreshExpiryBtn").addEventListener("click", loadExpiry);
 
   showScreen("/mm01"); // default screen
 
