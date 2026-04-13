@@ -65,10 +65,28 @@
 <!-- SCREENS -->
 
 <div id="mm01" class="card">
-  <h3>/MM01 - Create Item</h3>
-  <input id="itemName" placeholder="Item Name">
-  <input id="category" placeholder="Category">
-  <button id="addItemBtn">Create</button>
+  <h3>/MM01 - Create Material</h3>
+
+  <h4>Basic Data</h4>
+  <input id="material_code" placeholder="Material Code">
+  <input id="description" placeholder="Description">
+  <input id="unit" placeholder="Unit (EA/KG)">
+  <input id="material_type" placeholder="Type (RAW/FG)">
+
+  <h4>Plant Data</h4>
+  <input id="plant" placeholder="Plant">
+  <input id="storage_location" placeholder="Storage Location">
+
+  <h4>Purchasing</h4>
+  <input id="vendor" placeholder="Vendor">
+  <input id="purchasing_group" placeholder="Purchasing Group">
+
+  <h4>Inventory</h4>
+  <label>Batch Managed</label>
+  <input type="checkbox" id="batch_managed" checked>
+  <input id="shelf_life" type="number" placeholder="Shelf Life (days)">
+
+  <button id="addItemBtn">Create Material</button>
 </div>
 
 <div id="migo" class="card" style="display:none;">
@@ -170,16 +188,29 @@ async function loadItems() {
 // CREATE ITEM (/MM01)
 // =====================
 async function addItem() {
-  const name = document.getElementById("itemName").value;
-  const category = document.getElementById("category").value;
+  const data = {
+    material_code: document.getElementById("material_code").value,
+    description: document.getElementById("description").value,
+    unit: document.getElementById("unit").value,
+    material_type: document.getElementById("material_type").value,
+    plant: document.getElementById("plant").value,
+    storage_location: document.getElementById("storage_location").value,
+    vendor: document.getElementById("vendor").value,
+    purchasing_group: document.getElementById("purchasing_group").value,
+    batch_managed: document.getElementById("batch_managed").checked,
+    shelf_life: parseInt(document.getElementById("shelf_life").value || 0)
+  };
 
   const { error } = await supabaseClient
     .from("items")
-    .insert([{ item_name: name, category }]);
+    .insert([data]);
 
-  if (error) return alert(error.message);
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
-  alert("Material Created");
+  alert("Material Created Successfully");
 }
 
 // =====================
