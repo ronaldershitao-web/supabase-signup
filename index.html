@@ -215,11 +215,13 @@
         <th>Select</th>
         <th>Storage Bin</th>
         <th>Material</th>
-<th>Description</th>
-<th>Stock Type</th>
 <th>Batch</th>
+<th>Expiry</th>
 <th>Qty</th>
+<th>UoM</th>
+<th>Bin</th>
 <th>HU</th>
+<th>Action</th>
       </tr>
     </thead>
     <tbody id="monTable"></tbody>
@@ -687,20 +689,22 @@ async function loadExpiry() {
 
  async function assignToHU() {
 
-  const stockLineId = document.getElementById("stock_select").value;
-  const huId = document.getElementById("hu_select").value;
+  // 1. get selected stock lines
+  const selected = Array.from(document.querySelectorAll(".stockSelect:checked"))
+    .map(cb => cb.value);
 
-  if (!stockLineId || !huId) {
+  const huId = document.getElementById("assignHU").value;
+
+  if (!selected.length || !huId) {
     alert("Select Stock + HU first");
     return;
   }
 
+  // 2. update all selected rows
   const { error } = await supabaseClient
     .from("stock_lines")
-    .update({
-      hu_id: huId
-    })
-    .eq("id", stockLineId);
+    .update({ hu_id: huId })
+    .in("id", selected);
 
   if (error) {
     console.error(error);
@@ -709,7 +713,8 @@ async function loadExpiry() {
   }
 
   alert("Stock assigned to HU");
-  loadInventory();
+
+  loadMonitor();
 }
   
   
