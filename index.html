@@ -685,34 +685,31 @@ async function loadExpiry() {
 }
 
 
-  async function assignToHU() {
+ async function assignToHU() {
 
-  const huId = document.getElementById("assignHU").value;
+  const stockLineId = document.getElementById("stock_select").value;
+  const huId = document.getElementById("hu_select").value;
 
-  const selected = document.querySelectorAll(".stockSelect:checked");
-
-  if (selected.length === 0) {
-    alert("Select at least 1 row");
+  if (!stockLineId || !huId) {
+    alert("Select Stock + HU first");
     return;
   }
 
-  for (let row of selected) {
+  const { error } = await supabaseClient
+    .from("stock_lines")
+    .update({
+      hu_id: huId
+    })
+    .eq("id", stockLineId);
 
-    const stockId = row.value;
-
-    const { error } = await supabaseClient
-      .from("stock_lines")
-      .update({ hu_id: huId })
-      .eq("id", stockId);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
+  if (error) {
+    console.error(error);
+    alert(error.message);
+    return;
   }
 
-  alert("Assigned to HU");
-  loadMonitor();
+  alert("Stock assigned to HU");
+  loadInventory();
 }
   
   
