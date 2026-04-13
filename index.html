@@ -117,13 +117,14 @@
 
   <table>
     <thead>
-      <tr>
-        <th>Item</th>
-        <th>Batch</th>
-        <th>Expiry</th>
-        <th>Qty</th>
-      </tr>
-    </thead>
+  <tr>
+    <th>Item</th>
+    <th>Batch</th>
+    <th>Expiry</th>
+    <th>Qty</th>
+    <th>UoM</th>
+  </tr>
+</thead>
     <tbody id="inventoryTable"></tbody>
   </table>
 </div>
@@ -282,33 +283,23 @@ async function loadInventory() {
   table.innerHTML = "";
 
   let currentMaterial = null;
-  let materialTotal = 0;
 
   data.forEach(r => {
 
     // =========================
-    // NEW MATERIAL HEADER ROW
+    // MATERIAL HEADER
     // =========================
     if (currentMaterial !== r.material_code) {
-
       currentMaterial = r.material_code;
-      materialTotal = 0;
 
       const header = document.createElement("tr");
       header.innerHTML = `
-        <td colspan="4" style="
-          background:#222;
-          color:white;
-          font-weight:bold;
-          text-align:left;
-        ">
+        <td colspan="5" style="background:#222; color:white; font-weight:bold;">
           ${r.material_code} - ${r.description}
         </td>
       `;
       table.appendChild(header);
     }
-
-    materialTotal += Number(r.quantity || 0);
 
     // =========================
     // BATCH ROW
@@ -316,10 +307,11 @@ async function loadInventory() {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-      <td style="padding-left:20px; text-align:left;">↳</td>
+      <td></td>
       <td>${r.batch_no || '-'}</td>
       <td>${r.expiry_date || '-'}</td>
       <td>${r.quantity}</td>
+      <td>${r.uom || 'EA'}</td>
     `;
 
     table.appendChild(tr);
