@@ -182,6 +182,24 @@
   <button id="createBinBtn">Create Bin</button>
 </div>
 
+  <div id="hu01" class="card" style="display:none;">
+  <h3>/HU01 - Create Handling Unit</h3>
+
+  <input id="hu_code" placeholder="HU Code (AUTO or manual)">
+
+  <select id="hu_type">
+    <option value="BOX">BOX</option>
+    <option value="BAG">BAG</option>
+    <option value="PALLET">PALLET</option>
+  </select>
+
+  <select id="parent_hu"></select>
+
+  <select id="location_select"></select>
+
+  <button id="createHuBtn">Create HU</button>
+</div>
+
 <script>
 // =====================
 // SUPABASE INIT (ONLY ONCE)
@@ -195,7 +213,7 @@ const supabaseClient = window.supabase.createClient(
 // SCREEN CONTROL
 // =====================
 function showScreen(code) {
-  ["mm01","migo","mb1a","mb52","mb53","spro"].forEach(id => {
+  ["mm01","migo","mb1a","mb52","mb53","spro","hu01"].forEach(id => {
     document.getElementById(id).style.display = "none";
   });
 
@@ -213,6 +231,7 @@ function showScreen(code) {
   if (screen === "mb52") loadInventory();
   if (screen === "mb53") loadExpiry();
   if (screen === "spro") loadConfigDropdowns();
+  if (screen === "hu01") loadHUConfig();
 }
 
 // =====================
@@ -533,6 +552,51 @@ async function loadExpiry() {
   loadConfigDropdowns();
 }
 
+  // =========================
+    // Warehouse Monitor
+    // =========================
+
+  async function loadHUConfig() {
+  // Load existing HUs (for nesting)
+  const { data: hus } = await supabaseClient
+    .from("handling_units")
+    .select("*");
+
+  const parentSel = document.getElementById("parent_hu");
+  parentSel.innerHTML = `<option value="">NO PARENT</option>`;
+
+  hus.forEach(h => {
+    parentSel.add(new Option(h.hu_code, h.id));
+  });
+
+  // Load locations (from your SPRO)
+  const { data: locs } = await supabaseClient
+    .from("warehouse_locations")
+    .select("*");
+
+  const locSel = document.getElementById("location_select");
+  locSel.innerHTML = "";
+
+  locs.forEach(l => {
+    locSel.add(new Option(l.location_name, l.id));
+  });
+}
+
+  async function createHU() {
+  const { error } = await supabaseClient
+    .from("handling_units")
+    .insert([{
+      hu_code: document.getElementById("hu_code").value,
+      hu_type: document.getElementById("hu_type").value,
+      parent_hu_id: document.getElementById("parent_hu").value || null,
+      location_id: document.getElementById("location_select").value
+    }]);
+
+  if (error) return alert(error.message);
+
+  alert("HU Created");
+  loadHUConfig();
+}
   
   
 // =====================
@@ -549,6 +613,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("createLocationBtn").addEventListener("click", createLocation);
 document.getElementById("createSectionBtn").addEventListener("click", createSection);
 document.getElementById("createBinBtn").addEventListener("click", createBin);
+  document.getElementById("createHuBtn").addEventListener("click", createHU);
 
   showScreen("/mm01"); // default screen
 
