@@ -201,7 +201,7 @@
   <button id="createHuBtn">Create HU</button>
 </div>
 
-  <div id="scwmmon" class="card" style="display:none;">
+  <div id="scwm/mon" class="card" style="display:none;">
   <h3>/SCWM/MON - Warehouse Monitor</h3>
 
   <!-- FILTER -->
@@ -214,9 +214,11 @@
       <tr>
         <th>Select</th>
         <th>Material</th>
-        <th>Batch</th>
-        <th>Qty</th>
-        <th>HU</th>
+<th>Description</th>
+<th>Stock Type</th>
+<th>Batch</th>
+<th>Qty</th>
+<th>HU</th>
       </tr>
     </thead>
     <tbody id="monTable"></tbody>
@@ -241,7 +243,7 @@ const supabaseClient = window.supabase.createClient(
 // SCREEN CONTROL
 // =====================
 function showScreen(code) {
-  ["mm01","migo","mb1a","mb52","mb53","spro","hu01"].forEach(id => {
+  ["mm01","migo","mb1a","mb52","mb53","spro","hu01","scwm/mon"].forEach(id => {
     document.getElementById(id).style.display = "none";
   });
 
@@ -260,7 +262,7 @@ function showScreen(code) {
   if (screen === "mb53") loadExpiry();
   if (screen === "spro") loadConfigDropdowns();
   if (screen === "hu01") loadHUConfig();
-  if (screen === "scwmmon") {loadMonitor();loadHUList();}
+  if (screen === "scwm/mon") {loadMonitor();loadHUList();}
 }
 
 // =====================
@@ -652,12 +654,17 @@ async function loadExpiry() {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-      <td><input type="checkbox" class="stockSelect" value="${r.id}"></td>
-      <td>${r.material_code}</td>
-      <td>${r.batch_no || '-'}</td>
-      <td>${r.quantity}</td>
-      <td>${r.hu_code || 'NO HU'}</td>
-    `;
+  <td><input type="checkbox" class="stockSelect" value="${r.stock_id}"></td>
+
+  <td>${r.material_code}</td>
+  <td>${r.material_description}</td>
+
+  <td>${r.stock_type}</td>
+
+  <td>${r.batch_no || '-'}</td>
+  <td>${r.quantity}</td>
+  <td>${r.hu_code || 'NO HU'}</td>
+`;
 
     table.appendChild(tr);
   });
