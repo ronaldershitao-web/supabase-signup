@@ -351,24 +351,56 @@ async function loadExpiry() {
 
   const today = new Date();
 
-  data.forEach(r => {
+  // =========================
+  // 1. PROCESS DATA FIRST
+  // =========================
+  const processed = data
+    .filter(r => r.expiry_date)
+    .map(r => {
+      const exp = new Date(r.expiry_date);
 
-    if (!r.expiry_date) return;
+      const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
 
-    const exp = new Date(r.expiry_date);
-    const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+      // format date DD-MMM-YYYY
+      const formattedDate = exp.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
 
-    let status = "OK";
-    let color = "green";
+      // status rules
+      let status = "OK";
+      let color = "green";
 
-    if (diffDays < 0) {
-      status = "EXPIRED";
-      color = "red";
-    } else if (diffDays <= 7) {
-      status = "SOON";
-      color = "orange";
-    }
+      if (diffDays < 0) {
+        status = "EXPIRED";
+        color = "red";
+      } else if (diffDays <= 14) {
+        status = "EXPIRING";
+        color = "orange";
+      }
 
+      return {
+        material_code: r.material_code,
+        description: r.description,
+        batch_no: r.batch_no,
+        expiry_date: formattedDate,
+        quantity: r.quantity,
+        days_left: diffDays,
+        status,
+        color
+      };
+    });
+
+  // =========================
+  // 2. SORT BY DAYS LEFT ASC
+  // =========================
+  processed.sort((a, b) => a.days_left - b.days_left);
+
+  // =========================
+  // 3. RENDER TABLE
+  // =========================
+  processed.forEach(r => {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
@@ -376,8 +408,10 @@ async function loadExpiry() {
       <td>${r.batch_no || '-'}</td>
       <td>${r.expiry_date}</td>
       <td>${r.quantity}</td>
-      <td>${diffDays}</td>
-      <td style="color:${color}; font-weight:bold;">${status}</td>
+      <td>${r.days_left}</td>
+      <td style="color:${r.color}; font-weight:bold;">
+        ${r.status}
+      </td>
     `;
 
     table.appendChild(tr);
