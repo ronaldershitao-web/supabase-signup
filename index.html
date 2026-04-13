@@ -668,6 +668,11 @@ async function loadExpiry() {
   <td>${r.uom}</td>
   <td>${r.bin_code}</td>
   <td>${r.hu_code || 'NO HU'}</td>
+   <td>
+    <button onclick="assignSingleHU(${r.stock_id})">
+      Assign HU
+    </button>
+  </td>
 `;
 
     table.appendChild(tr);
@@ -717,7 +722,31 @@ async function loadExpiry() {
 
   loadMonitor();
 }
-  
+  async function assignSingleHU(stockId) {
+
+  const huId = document.getElementById("assignHU").value;
+
+  if (!huId) {
+    alert("Select HU first");
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("stock_lines")
+    .update({
+      hu_id: huId
+    })
+    .eq("id", stockId);
+
+  if (error) {
+    console.error(error);
+    alert(error.message);
+    return;
+  }
+
+  alert("Assigned to HU");
+  loadMonitor();
+}
   
   
 // =====================
