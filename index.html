@@ -273,20 +273,52 @@ async function loadInventory() {
   const { data, error } = await supabaseClient
     .from("inventory_view")
     .select("*")
-    .limit(100);
+    .order("material_code", { ascending: true })
+    .order("batch_no", { ascending: true });
 
   if (error) return console.error(error);
 
   const table = document.getElementById("inventoryTable");
   table.innerHTML = "";
 
+  let currentMaterial = null;
+  let materialTotal = 0;
+
   data.forEach(r => {
+
+    // =========================
+    // NEW MATERIAL HEADER ROW
+    // =========================
+    if (currentMaterial !== r.material_code) {
+
+      currentMaterial = r.material_code;
+      materialTotal = 0;
+
+      const header = document.createElement("tr");
+      header.innerHTML = `
+        <td colspan="4" style="
+          background:#222;
+          color:white;
+          font-weight:bold;
+          text-align:left;
+        ">
+          ${r.material_code} - ${r.description}
+        </td>
+      `;
+      table.appendChild(header);
+    }
+
+    materialTotal += Number(r.quantity || 0);
+
+    // =========================
+    // BATCH ROW
+    // =========================
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-      <td>${r.material_code}</td>
-      <td>${r.batch_no || ''}</td>
-      <td>${r.expiry_date || ''}</td>
+      <td style="padding-left:20px; text-align:left;">↳</td>
+      <td>${r.batch_no || '-'}</td>
+      <td>${r.expiry_date || '-'}</td>
       <td>${r.quantity}</td>
     `;
 
