@@ -676,7 +676,7 @@ async function loadExpiry() {
   <td>${r.uom}</td>
 
   <td>${r.hu_code || 'NO HU'}</td>
-  <td>${r.highest_hu || 'NO HU'}</td>
+  <td>${r.parent_hu_code || 'NO HU'}</td>
 
   <td>
     <button onclick="assignSingleHU(${r.stock_id})">
