@@ -239,7 +239,29 @@
 <button id="assignBinBtn">Assign Bin</button>
 </div>
 
-  
+  <div id="lt22" class="card" style="display:none;">
+  <h3>/LT22 - Open Warehouse Tasks</h3>
+
+  <button id="refreshWTBtn">Refresh WT</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Select</th>
+        <th>Material</th>
+        <th>From Bin</th>
+        <th>To Bin</th>
+        <th>HU</th>
+        <th>Qty</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+
+    <tbody id="wtTable"></tbody>
+  </table>
+</div>
 
 <script>
 // =====================
@@ -254,7 +276,7 @@ const supabaseClient = window.supabase.createClient(
 // SCREEN CONTROL
 // =====================
 function showScreen(code) {
-  ["mm01","migo","mb1a","mb52","mb53","spro","hu01","scwm/mon"].forEach(id => {
+  ["mm01","migo","mb1a","mb52","mb53","spro","hu01","scwm/mon","lt22"].forEach(id => {
     document.getElementById(id).style.display = "none";
   });
 
@@ -274,6 +296,7 @@ function showScreen(code) {
   if (screen === "spro") loadConfigDropdowns();
   if (screen === "hu01") loadHUConfig();
   if (screen === "scwm/mon") {loadMonitor();loadHUList();loadBinList();}
+  if (screen === "lt22") loadWT();
 }
 
 // =====================
@@ -819,6 +842,65 @@ async function loadExpiry() {
   await loadMonitor();
 }
   
+async function loadWT() {
+
+  const { data, error } = await supabaseClient
+    .from("wt_open_view")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return console.error(error);
+
+  const table = document.getElementById("wtTable");
+  table.innerHTML = "";
+
+  data.forEach(r => {
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>
+        <input type="checkbox" class="wtSelect" value="${r.wt_id}">
+      </td>
+
+      <td>${r.material_code || '-'}</td>
+      <td>${r.source_bin || '-'}</td>
+      <td>${r.target_bin_id || '-'}</td>
+      <td>${r.hu_code || '-'}</td>
+      <td>${r.quantity}</td>
+      <td>${r.task_type}</td>
+      <td>${r.status}</td>
+
+      <td>
+        <button onclick="confirmWT('${r.wt_id}')">
+          Confirm
+        </button>
+      </td>
+    `;
+
+    table.appendChild(tr);
+  });
+}
+
+  async function confirmWT(wtId) {
+
+  const { error } = await supabaseClient
+    .rpc("confirm_wt", {
+      p_wt_id: wtId
+    });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert("WT Confirmed");
+
+  // refresh both WT + inventory
+  await loadWT();
+  await loadMonitor();
+}
+
   
 // =====================
 // INIT (NO onclick, NO ERRORS)
@@ -838,6 +920,7 @@ document.getElementById("createBinBtn").addEventListener("click", createBin);
   document.getElementById("loadMonBtn").addEventListener("click", loadMonitor);
 document.getElementById("assignHuBtn").addEventListener("click", assignToHU);
   document.getElementById("assignBinBtn").addEventListener("click", assignToBin);
+  document.getElementById("refreshWTBtn").addEventListener("click", loadWT);
 
   showScreen("/mm01"); // default screen
 
