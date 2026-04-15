@@ -882,25 +882,21 @@ async function loadWT() {
   });
 }
 
-  async function confirmWT(wtId) {
+ async function confirmWT(wtId) {
 
-  const { error } = await supabaseClient
-    .rpc("confirm_wt", {
-      p_wt_id: wtId
-    });
+  const { data, error } = await supabaseClient
+    .rpc("confirm_wt", { p_wt_id: wtId });
 
   if (error) {
     alert(error.message);
     return;
   }
 
-  alert("WT Confirmed");
+  alert(data); // shows real backend status
 
-  // refresh both WT + inventory
   await loadWT();
   await loadMonitor();
 }
-
   
 // =====================
 // INIT (NO onclick, NO ERRORS)
