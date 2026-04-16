@@ -312,8 +312,12 @@ const supabaseClient = window.supabase.createClient(
 // SCREEN CONTROL
 // =====================
 function showScreen(code) {
-  ["mm01","migo","mb1a","mb52","mb53","spro","hu01","scwm/mon","lt22","vl01n","obmon","obgi"].forEach(id => {
-    document.getElementById(id).style.display = "none";
+
+  const screens = ["mm01","migo","mb1a","mb52","mb53","spro","hu01","scwm/mon","lt22","vl01n","obgi"];
+
+  screens.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
   });
 
   const screen = code.replace("/", "");
@@ -334,11 +338,11 @@ function showScreen(code) {
   if (screen === "scwm/mon") {loadMonitor();loadHUList();loadBinList();}
   if (screen === "lt22") loadWT();
   if (screen === "vl01n") loadDeliveries();
-if (screen === "obmon") loadDeliveries();
-if (screen === "obgi") {
-  loadGIDeliveries();
-  loadScrapGI();
-}
+
+  if (screen === "obgi") {
+    loadGIDeliveries();
+    loadScrapGI();
+  }
 }
 
 // =====================
@@ -1150,7 +1154,10 @@ document.getElementById("assignHuBtn").addEventListener("click", assignToHU);
   document.getElementById("assignBinBtn").addEventListener("click", assignToBin);
   document.getElementById("refreshWTBtn").addEventListener("click", loadWT);
   document.getElementById("createDeliveryBtn").addEventListener("click", createDelivery);
-document.getElementById("refreshDeliveryBtn").addEventListener("click", loadDeliveries);
+const refreshDeliveryBtn = document.getElementById("refreshDeliveryBtn");
+if (refreshDeliveryBtn) {
+  refreshDeliveryBtn.addEventListener("click", loadDeliveries);
+}
 const giBtn = document.getElementById("postGIBtn");
 if (giBtn) {
   giBtn.addEventListener("click", postBulkGI);
