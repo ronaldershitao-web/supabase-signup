@@ -263,6 +263,46 @@
   </table>
 </div>
 
+<div id="vl01n" class="card" style="display:none;">
+  <h3>/VL01N - Create Outbound Delivery</h3>
+
+  <select id="delivery_type">
+    <option value="SCRAP">SCRAP</option>
+    <option value="DONATION">DONATION</option>
+    <option value="ISSUE">ISSUE</option>
+  </select>
+
+  <input id="delivery_notes" placeholder="Notes">
+
+  <button id="createDeliveryBtn">Create Delivery</button>
+</div>
+
+ <div id="obmon" class="card" style="display:none;">
+  <h3>/OBMON - Outbound Monitor</h3>
+
+  <button id="refreshDeliveryBtn">Refresh</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Delivery ID</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="deliveryTable"></tbody>
+  </table>
+</div> 
+
+  <div id="obgi" class="card" style="display:none;">
+  <h3>/OBGI - Goods Issue</h3>
+
+  <select id="gi_delivery"></select>
+
+  <button id="postGIBtn">Post Goods Issue</button>
+</div>
+  
 <script>
 // =====================
 // SUPABASE INIT (ONLY ONCE)
@@ -276,7 +316,7 @@ const supabaseClient = window.supabase.createClient(
 // SCREEN CONTROL
 // =====================
 function showScreen(code) {
-  ["mm01","migo","mb1a","mb52","mb53","spro","hu01","scwm/mon","lt22"].forEach(id => {
+  ["mm01","migo","mb1a","mb52","mb53","spro","hu01","scwm/mon","lt22","vl01n","obmon","obgi"].forEach(id => {
     document.getElementById(id).style.display = "none";
   });
 
@@ -297,6 +337,9 @@ function showScreen(code) {
   if (screen === "hu01") loadHUConfig();
   if (screen === "scwm/mon") {loadMonitor();loadHUList();loadBinList();}
   if (screen === "lt22") loadWT();
+  if (screen === "vl01n") loadDeliveries();
+if (screen === "obmon") loadDeliveries();
+if (screen === "obgi") loadGIDeliveries();
 }
 
 // =====================
@@ -899,6 +942,118 @@ async function confirmWT(wtId) {
 
   await loadWT();
   await loadMonitor();
+}
+
+
+  async function createDelivery() {
+
+  const type = document.getElementById("delivery_type").value;
+  const notes = document.getElementById("delivery_notes").value;
+
+  const { data, error } = await supabaseClient
+    .from("outbound_deliveries")
+    .insert([{
+      delivery_type: type,
+      notes: notes
+    }])
+    .select()
+    .single();
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert("Delivery Created: " + data.id);
+
+  // auto refresh monitor
+  await loadDeliveries();
+}
+
+
+  async function loadDeliveries() {
+
+  const { data, error } = await supabaseClient
+    .from("outbound_deliveries")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return console.error(error);
+
+  const table = document.getElementById("deliveryTable");
+  table.innerHTML = "";
+
+  data.forEach(d => {
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${d.id}</td>
+      <td>${d.delivery_type}</td>
+      <td>${d.status}</td>
+
+      <td>
+        <button onclick="generateWT('${d.id}')">
+          Generate WT
+        </button>
+      </td>
+    `;
+
+    table.appendChild(tr);
+  });
+}
+
+  async function generateWT(deliveryId) {
+
+  const { data, error } = await supabaseClient
+    .rpc("generate_wt_from_delivery", {
+      p_delivery_id: deliveryId
+    });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert(data);
+
+  await loadWT();
+  await loadDeliveries();
+}
+
+  async function loadGIDeliveries() {
+
+  const { data } = await supabaseClient
+    .from("outbound_deliveries")
+    .select("id, delivery_type")
+    .eq("status", "OPEN");
+
+  const sel = document.getElementById("gi_delivery");
+  sel.innerHTML = "";
+
+  data.forEach(d => {
+    sel.add(new Option(`${d.delivery_type} - ${d.id}`, d.id));
+  });
+}
+
+  async function postGI() {
+
+  const deliveryId = document.getElementById("gi_delivery").value;
+
+  const { data, error } = await supabaseClient
+    .rpc("post_goods_issue", {
+      p_delivery_id: deliveryId
+    });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert(data);
+
+  await loadInventory();
+  await loadDeliveries();
 }
   
 // =====================
