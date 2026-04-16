@@ -278,38 +278,16 @@
 </div>
 
  <div id="obmon" class="card" style="display:none;">
-  <h3>/OBMON - Outbound Monitor</h3>
-
-  <button id="refreshDeliveryBtn">Refresh</button>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Delivery ID</th>
-        <th>Type</th>
-        <th>Status</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="deliveryTable"></tbody>
-  </table>
-</div> 
-
-  <div id="obgi" class="card" style="display:none;">
   <h3>/OBGI - Goods Issue</h3>
 
-  <select id="gi_delivery"></select>
-
-  <button id="postGIBtn">Post Goods Issue</button>
-
-    <h4>Scrap Stock (Ready for GI)</h4>
+<select id="gi_delivery"></select>
+<button onclick="loadOBItems()">Load Items</button>
 
 <table>
   <thead>
     <tr>
       <th>Select</th>
       <th>Material</th>
-      <th>Batch</th>
       <th>Qty</th>
       <th>Bin</th>
       <th>Action</th>
@@ -318,7 +296,8 @@
 
   <tbody id="giTable"></tbody>
 </table>
-</div>
+
+<button id="postGIBtn">Post GI (Bulk)</button>
   
 <script>
 // =====================
@@ -1154,7 +1133,40 @@ async function confirmWT(wtId) {
   await loadInventory();
 }
 
-  
+async function loadOBItems() {
+
+  const deliveryId = document.getElementById("gi_delivery").value;
+
+  const { data, error } = await supabaseClient
+    .from("inventory_view")
+    .select("*")
+    .eq("delivery_id", deliveryId);   // ❗ THIS MUST EXIST
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  const table = document.getElementById("giTable");
+  table.innerHTML = "";
+
+  data.forEach(r => {
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td><input type="checkbox" value="${r.stock_id}" class="giSelect"></td>
+      <td>${r.material_code}</td>
+      <td>${r.quantity}</td>
+      <td>${r.bin_code}</td>
+      <td>
+        <button onclick="postSingleGI('${r.stock_id}')">GI</button>
+      </td>
+    `;
+
+    table.appendChild(tr);
+  });
+}  
   
 // =====================
 // INIT (NO onclick, NO ERRORS)
