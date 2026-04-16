@@ -301,6 +301,23 @@
   <select id="gi_delivery"></select>
 
   <button id="postGIBtn">Post Goods Issue</button>
+
+    <h4>Scrap Stock (Ready for GI)</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>Select</th>
+      <th>Material</th>
+      <th>Batch</th>
+      <th>Qty</th>
+      <th>Bin</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+
+  <tbody id="giTable"></tbody>
+</table>
 </div>
   
 <script>
@@ -339,7 +356,10 @@ function showScreen(code) {
   if (screen === "lt22") loadWT();
   if (screen === "vl01n") loadDeliveries();
 if (screen === "obmon") loadDeliveries();
-if (screen === "obgi") loadGIDeliveries();
+if (screen === "obgi") {
+  loadGIDeliveries();
+  loadScrapGI();
+}
 }
 
 // =====================
@@ -1036,25 +1056,105 @@ async function confirmWT(wtId) {
   });
 }
 
-  async function postGI() {
+ async function loadScrapGI() {
+
+  const { data, error } = await supabaseClient
+    .from("inventory_view")
+    .select("*")
+    .eq("bin_code", "SCRAP")
+    .gt("quantity", 0);
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  const table = document.getElementById("giTable");
+  table.innerHTML = "";
+
+  data.forEach(r => {
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>
+        <input type="checkbox" class="giSelect" value="${r.stock_id}">
+      </td>
+
+      <td>${r.material_code}</td>
+      <td>${r.batch_no || '-'}</td>
+      <td>${r.quantity}</td>
+      <td>${r.bin_code}</td>
+
+      <td>
+        <button onclick="postSingleGI('${r.stock_id}')">
+          GI
+        </button>
+      </td>
+    `;
+
+    table.appendChild(tr);
+  });
+}
+
+  async function postSingleGI(stockId) {
 
   const deliveryId = document.getElementById("gi_delivery").value;
 
-  const { data, error } = await supabaseClient
-    .rpc("post_goods_issue", {
-      p_delivery_id: deliveryId
-    });
+  if (!deliveryId) {
+    alert("Select Delivery first");
+    return;
+  }
+
+  const { data, error } = await supabaseClient.rpc(
+    "post_goods_issue_line",
+    {
+      p_delivery_id: deliveryId,
+      p_stock_id: stockId
+    }
+  );
+
+  if (error) {
+    console.error(error);
+    alert(error.message);
+    return;
+  }
+
+  alert("GI Posted for Item");
+
+  await loadScrapGI();
+  await loadInventory();
+}
+
+  async function postBulkGI() {
+
+  const deliveryId = document.getElementById("gi_delivery").value;
+
+  const selected = Array.from(document.querySelectorAll(".giSelect:checked"))
+    .map(cb => cb.value);
+
+  if (!selected.length || !deliveryId) {
+    alert("Select delivery + items");
+    return;
+  }
+
+  const { error } = await supabaseClient.rpc("post_goods_issue_bulk", {
+    p_delivery_id: deliveryId,
+    p_stock_ids: selected
+  });
 
   if (error) {
     alert(error.message);
     return;
   }
 
-  alert(data);
+  alert("GI Completed");
 
+  await loadScrapGI();
   await loadInventory();
-  await loadDeliveries();
 }
+
+  
   
 // =====================
 // INIT (NO onclick, NO ERRORS)
