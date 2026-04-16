@@ -277,11 +277,11 @@
   <button id="createDeliveryBtn">Create Delivery</button>
 </div>
 
- <div id="obmon" class="card" style="display:none;">
+ <div id="obgi" class="card">
   <h3>/OBGI - Goods Issue</h3>
 
 <select id="gi_delivery"></select>
-<button onclick="loadOBItems()">Load Items</button>
+
 
 <table>
   <thead>
@@ -1056,21 +1056,16 @@ async function confirmWT(wtId) {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-      <td>
-        <input type="checkbox" class="giSelect" value="${r.stock_id}">
-      </td>
-
-      <td>${r.material_code}</td>
-      <td>${r.batch_no || '-'}</td>
-      <td>${r.quantity}</td>
-      <td>${r.bin_code}</td>
-
-      <td>
-        <button onclick="postSingleGI('${r.stock_id}')">
-          GI
-        </button>
-      </td>
-    `;
+  <td><input type="checkbox" class="giSelect" value="${r.stock_id}"></td>
+  <td>${r.material_code}</td>
+  <td>${r.quantity}</td>
+  <td>${r.bin_code}</td>
+  <td>
+    <button onclick="postSingleGI('${r.stock_id}')">
+      GI
+    </button>
+  </td>
+`;
 
     table.appendChild(tr);
   });
@@ -1133,40 +1128,7 @@ async function confirmWT(wtId) {
   await loadInventory();
 }
 
-async function loadOBItems() {
 
-  const deliveryId = document.getElementById("gi_delivery").value;
-
-  const { data, error } = await supabaseClient
-    .from("inventory_view")
-    .select("*")
-    .eq("delivery_id", deliveryId);   // ❗ THIS MUST EXIST
-
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  const table = document.getElementById("giTable");
-  table.innerHTML = "";
-
-  data.forEach(r => {
-
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td><input type="checkbox" value="${r.stock_id}" class="giSelect"></td>
-      <td>${r.material_code}</td>
-      <td>${r.quantity}</td>
-      <td>${r.bin_code}</td>
-      <td>
-        <button onclick="postSingleGI('${r.stock_id}')">GI</button>
-      </td>
-    `;
-
-    table.appendChild(tr);
-  });
-}  
   
 // =====================
 // INIT (NO onclick, NO ERRORS)
@@ -1189,7 +1151,13 @@ document.getElementById("assignHuBtn").addEventListener("click", assignToHU);
   document.getElementById("refreshWTBtn").addEventListener("click", loadWT);
   document.getElementById("createDeliveryBtn").addEventListener("click", createDelivery);
 document.getElementById("refreshDeliveryBtn").addEventListener("click", loadDeliveries);
-document.getElementById("postGIBtn").addEventListener("click", postBulkGI);
+const giBtn = document.getElementById("postGIBtn");
+if (giBtn) {
+  giBtn.addEventListener("click", postBulkGI);
+};
+  document.getElementById("gi_delivery").addEventListener("change", () => {
+  loadScrapGI();
+});
 
   showScreen("/mm01"); // default screen
 
