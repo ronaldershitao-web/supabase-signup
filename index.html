@@ -884,6 +884,8 @@ async function loadWT() {
 
 async function confirmWT(wtId) {
 
+  console.log("WT ID from UI:", wtId);
+
   const { data, error } = await supabaseClient
     .rpc("confirm_wt", { p_wt_id: wtId });
 
@@ -893,14 +895,7 @@ async function confirmWT(wtId) {
     return;
   }
 
-  console.log("Confirm WT result:", data);
-
-  if (data !== 'SUCCESS') {
-    alert(data);
-    return;
-  }
-
-  alert("WT Confirmed Successfully");
+  alert(data);
 
   await loadWT();
   await loadMonitor();
